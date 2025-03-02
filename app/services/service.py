@@ -2,7 +2,7 @@ from typing import Optional, Iterable
 from sqlalchemy.orm import Session
 from sqlalchemy.testing.pickleable import User
 
-from models.dao import *
+from app.models.dao import *
 import functools
 import traceback
 
@@ -63,8 +63,8 @@ def get_product_by_id(db: Session, id_product: int):
 
 
 @dbexception
-def update_product_name(db: Session, product: Product, new_name: str):
-    product = product
+def update_product_name(db: Session, product_id: int, new_name: str):
+    product = get_product_by_id(db, product_id)
     product.name = new_name
 
 # можно будет ещё методов сделать для обновления инфы через crud, но мне чет лень
@@ -96,14 +96,14 @@ def get_warehouse_by_id(db: Session, id_warehouse: int):
 
 
 @dbexception
-def update_warehouse_name(db: Session, warehouse: Warehouse, new_name: str):
-    warehouse = warehouse
+def update_warehouse_name(db: Session, warehouse_id: int, new_name: str):
+    warehouse = get_warehouse_by_id(db, warehouse_id)
     warehouse.name = new_name
 
 
 @dbexception
-def update_warehouse_address(db: Session, warehouse: Warehouse, new_address: str):
-    warehouse = warehouse
+def update_warehouse_address(db: Session, warehouse_id: int, new_address: str):
+    warehouse = get_warehouse_by_id(db, warehouse_id)
     warehouse.address = new_address
 
 # endregion
@@ -128,14 +128,14 @@ def get_category_by_id(db: Session, id_category: int):
 
 
 @dbexception
-def update_category_name(db: Session, category: Category, new_name: str):
-    category = category
+def update_category_name(db: Session, category_id: int, new_name: str):
+    category = get_category_by_id(db, category_id)
     category.name = new_name
 
 
 @dbexception
-def update_category_id_warehouse(db: Session, category: Category, id_warehouse: int):
-    category = category
+def update_category_id_warehouse(db: Session, category_id: int, id_warehouse: int):
+    category = get_category_by_id(db, category_id)
     category.id_warehouse = id_warehouse
 
 # endregion
@@ -160,13 +160,15 @@ def get_user_by_login(db: Session, login: str):
 
 
 @dbexception
-def update_user_password(db: Session, user: User, new_password: str):
+def update_user_password(db: Session, login_user: str, new_password: str):
+    user = get_user_by_login(login_user)
     user.password = new_password
     return True
 
 
 @dbexception
-def update_user_role(db: Session, user: User, role: str):
+def update_user_role(db: Session, login_user: str, role: int):
+    user = get_user_by_login(login_user)
     user.role = role
     return True
 
@@ -180,7 +182,7 @@ def add_role(db: Session, role_name: str) -> bool:
         role = Role(name=role_name)
         db.add(role)
         db.commit()
-        print("Saccess", role_name)
+        print("Success", role_name)
     except Exception as ex:
         print(traceback.format_exc())
         db.rollback()
@@ -197,7 +199,7 @@ def add_transaction_type(db: Session, type_name: str) -> bool:
         type = TypesTransaction(name=type_name)
         db.add(type)
         db.commit()
-        print("Saccess", type_name)
+        print("Success", type_name)
     except Exception as ex:
         print(traceback.format_exc())
         db.rollback()
@@ -220,7 +222,7 @@ def add_transaction(db: Session, transaction: Transaction) -> bool:
     try:
         db.add(transaction)
         db.commit()
-        print("Saccess", transaction.type, transaction.created_on)
+        print("Success", transaction.type, transaction.created_on)
     except Exception as ex:
         print(traceback.format_exc())
         db.rollback()
