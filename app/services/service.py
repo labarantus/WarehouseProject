@@ -1,4 +1,4 @@
-from typing import Optional, Iterable
+from typing import Optional, Iterable, List
 from sqlalchemy.orm import Session
 from sqlalchemy.testing.pickleable import User
 
@@ -28,15 +28,15 @@ def dbexception(db_func):
     return decorated_func
 
 
-""" _______PRODUCT________ """
 # region
+""" _______PRODUCT________ """
 
 
 def create_product(db: Session, name: str, price: float, id_warehouse: int, id_category: int):
     product = Product(name=name,
                       price=price,
                       id_warehouse=id_warehouse,
-                      category=id_category)
+                      id_category=id_category)
     return add_product(db, product)
 
 
@@ -59,8 +59,13 @@ def delete_product_by_id(db: Session, id_product: int):
 
 def get_product_by_id(db: Session, id_product: int):
     product = db.query(Product).filter(Product.id == id_product).first()
+    print(product)
     return product
 
+def get_product_all(db: Session):
+    product = db.query(Product).all()
+    print(product)
+    return product
 
 @dbexception
 def update_product_name(db: Session, product_id: int, new_name: str):
@@ -71,11 +76,14 @@ def update_product_name(db: Session, product_id: int, new_name: str):
 # endregion
 
 
-""" _______WAREHOUSE______ """
 # region
+""" _______WAREHOUSE______ """
+
+
 def create_warehouse(db: Session, address: str, name: str):
     warehouse = Warehouse(address=address, name=name)
     return add_warehouse(db, warehouse)
+
 
 @dbexception
 def add_warehouse(db: Session, warehouse: Warehouse):
@@ -109,8 +117,10 @@ def update_warehouse_address(db: Session, warehouse_id: int, new_address: str):
 # endregion
 
 
-""" _______CATEGORY______ """
 # region
+""" _______CATEGORY______ """
+
+
 def create_category(db: Session, id_warehouse: int, name: str):
     category = Category(id_warehouse=id_warehouse, name=name)
     return add_category(db, category)
@@ -141,11 +151,12 @@ def update_category_id_warehouse(db: Session, category_id: int, id_warehouse: in
 # endregion
 
 
-""" _______USER______ """
 # region
+""" _______USER______ """
+
 
 def create_user(db: Session, login: str, password: str, id_role: int):
-    user = Users(login=login, password=password, role=id_role)
+    user = Users(login=login, password=password, id_role=id_role)
     return add_user(db, user)
 
 
@@ -161,21 +172,23 @@ def get_user_by_login(db: Session, login: str):
 
 @dbexception
 def update_user_password(db: Session, login_user: str, new_password: str):
-    user = get_user_by_login(login_user)
+    user = get_user_by_login(db, login_user)
     user.password = new_password
     return True
 
 
 @dbexception
 def update_user_role(db: Session, login_user: str, role: int):
-    user = get_user_by_login(login_user)
-    user.role = role
+    user = get_user_by_login(db, login_user)
+    user.id_role = role
     return True
 
 # endregion
 
-""" _______ROLE______ """
+
 # region
+""" _______ROLE______ """
+
 
 def add_role(db: Session, role_name: str) -> bool:
     try:
@@ -189,32 +202,38 @@ def add_role(db: Session, role_name: str) -> bool:
         print("Failed")
         return False
     return True
-#endregion
+
+# endregion
 
 
-""" _______TRANSACTION_TYPE______ """
 # region
+""" _______TRANSACTION_TYPE______ """
+
+
 def add_transaction_type(db: Session, type_name: str) -> bool:
     try:
         type = TypesTransaction(name=type_name)
         db.add(type)
         db.commit()
         print("Success", type_name)
+
     except Exception as ex:
         print(traceback.format_exc())
         db.rollback()
         print("Failed")
         return False
+
     return True
 
 # endregion
 
-""" _______TRANSACTION______ """
+
 # region
+""" _______TRANSACTION______ """
 
 
-def create_transaction(db: Session, type: int, price: float, id_product: int, amount: int, id_user: int):
-    transaction = Transaction(type=type, price=price, id_product=id_product, amount=amount, id_user=id_user)
+def create_transaction(db: Session, id_type: int, price: float, id_product: int, amount: int, id_user: int):
+    transaction = Transaction(id_type=id_type, price=price, id_product=id_product, amount=amount, id_user=id_user)
     return add_transaction(db, transaction)
 
 
@@ -222,26 +241,43 @@ def add_transaction(db: Session, transaction: Transaction) -> bool:
     try:
         db.add(transaction)
         db.commit()
-        print("Success", transaction.type, transaction.created_on)
+        print("Success", transaction.id_type, transaction.created_on)
+
     except Exception as ex:
         print(traceback.format_exc())
         db.rollback()
         print("Failed")
         return False
+
     return True
 
-def get_transaction_by_product_id(db: Session, id_product: int) -> Optional[Transaction]:
+
+def get_transaction_by_product_id(db: Session, id_product: int) -> List[Transaction]:
     """ Выборка всех записей о транзакциях по ид товара """
     result = db.query(Transaction).join(Product).filter(Transaction.id_product == id_product).all()
     print(result)
-    return result
+    return result if result else []
+
 
 @dbexception
 def delete_transaction_by_product_id(db: Session, id_product: int) -> bool:
     """ Удаление записей о транзациях для указанного товара """
     transactions = get_transaction_by_product_id(db, id_product)
+
+    if len(transactions) == 0:
+        print("Transaction wasn't find")
+        return False
+
     print('Удаление', transactions, id_product)
 
-    for t in transactions:
-        db.delete(t)
+    try:
+        for t in transactions:
+            db.delete(t)
+
+    except Exception as ex:
+        print(traceback.format_exc())
+        db.rollback()
+        print("Failed to delete")
+        return False
+
 # endregion

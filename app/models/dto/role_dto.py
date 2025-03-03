@@ -1,7 +1,10 @@
 from pydantic import BaseModel
 
 
-class RoleDTO(BaseModel):
-    id: int
+class RoleBase(BaseModel):
     name: str
+
+
+class RoleDTO(RoleBase):
+    id: int
 

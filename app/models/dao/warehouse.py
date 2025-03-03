@@ -31,7 +31,7 @@ class Product(Base):
     name = Column(String(100), unique=True)
     price = Column(Numeric, nullable=False)
     id_warehouse = Column(Integer, ForeignKey('warehouse.id'))
-    category = Column(Integer, ForeignKey('category.id'))
+    id_category = Column(Integer, ForeignKey('category.id'))
     created_on = Column(DateTime(), default=datetime.now)
     count = Column(Integer, default=0)
 
@@ -54,7 +54,7 @@ class Warehouse(Base):
 class Transaction(Base):
     __tablename__ = 'transaction'
     id = Column(Integer, primary_key=True)
-    type = Column(Integer, ForeignKey('types_transaction.id'))
+    id_type = Column(Integer, ForeignKey('types_transaction.id'))
     price = Column(Numeric, nullable=False)
     id_product = Column(Integer, ForeignKey('product.id'))
     amount = Column(Numeric, nullable=False)
@@ -72,7 +72,7 @@ class Users(Base):
     id = Column(Integer, primary_key=True)
     login = Column(String(100), unique=True, nullable=False)
     password = Column(String(20), nullable=False)
-    role = Column(Integer, ForeignKey('role.id'))  # can be admin or user
+    id_role = Column(Integer, ForeignKey('role.id'))  # can be admin or user
 
 class Role(Base):
     __tablename__ = 'role'
