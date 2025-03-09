@@ -134,6 +134,10 @@ async def delete_product_by_id(product_id: int):
     """ Создание категории товара """
     with SessionLocal() as session:
         return service.delete_product_by_id(session, product_id)
+@router.delete('/delete_user_by_login', status_code=201)
+async def delete_user_by_login(login: str):
+    with SessionLocal() as session:
+        return service.delete_user(session, login)
 
 
 @router.put('/update_product_name', status_code=201)

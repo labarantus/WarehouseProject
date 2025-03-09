@@ -4,15 +4,12 @@ from pydantic import BaseModel
 
 
 class ProductBase(BaseModel):
-    """ DTO для добавления нового населённого пункта """
+    """ DTO для добавления нового товара """
     name: str
-    price: float
-    id_warehouse: int
     id_category: int
-    count: int
 
 
 class ProductDTO(ProductBase):
-    """ DTO для добавления нового населённого пункта """
     id: int
-    created_on: datetime
+    purchase_id: int
+    count: int

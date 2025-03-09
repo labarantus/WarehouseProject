@@ -29,17 +29,25 @@ class Product(Base):
     __tablename__ = 'product'
     id = Column(Integer, primary_key=True)
     name = Column(String(100), unique=True)
-    price = Column(Numeric, nullable=False)
-    id_warehouse = Column(Integer, ForeignKey('warehouse.id'))
     id_category = Column(Integer, ForeignKey('category.id'))
-    created_on = Column(DateTime(), default=datetime.now)
+    total_count = Column(Integer, default=0)
+    purchase_id = Column(Integer, ForeignKey('purchase.id'))
+
+
+class Purchase(Base):
+    __tablename__ = 'purchase'
+    id = Column(Integer, primary_key=True)
+    product_id = Column(Integer, ForeignKey('product.id'))
+    purchase_price = Column(Numeric, nullable=False)
+    selling_price = Column(Numeric, nullable=False)
+    id_warehouse = Column(Integer, ForeignKey('warehouse.id'))
     count = Column(Integer, default=0)
+    created_on = Column(DateTime(), default=datetime.now)
 
 
 class Category(Base):
     __tablename__ = 'category'
     id = Column(Integer, primary_key=True)
-    id_warehouse = Column(Integer, ForeignKey('warehouse.id'))
     name = Column(String(100), unique=True, nullable=False)
 
 
@@ -55,11 +63,19 @@ class Transaction(Base):
     __tablename__ = 'transaction'
     id = Column(Integer, primary_key=True)
     id_type = Column(Integer, ForeignKey('types_transaction.id'))
-    price = Column(Numeric, nullable=False)
-    id_product = Column(Integer, ForeignKey('product.id'))
+    id_purchase = Column(Integer, ForeignKey('purchase.id'))
     amount = Column(Numeric, nullable=False)
     id_user = Column(Integer, ForeignKey('users.id'))
     created_on = Column(DateTime(), default=datetime.now)
+
+
+class Expense(Base):
+    __tablename__ = 'expense'
+    id = Column(Integer, primary_key=True)
+    name = Column(String(100), nullable=False)
+    cost = Column(Numeric, nullable=False)  # Сумма расхода
+    description = Column(String(255), nullable=True)  # Описание расхода
+    created_on = Column(DateTime, default=datetime.now)  # Дата расхода
 
 
 class TypesTransaction(Base):
