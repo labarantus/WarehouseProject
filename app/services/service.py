@@ -224,7 +224,8 @@ def update_category_name(db: Session, category_id: int, new_name: str):
 
 
 def create_user(db: Session, login: str, password: str, id_role: int):
-    user = Users(login=login, password=password, id_role=id_role)
+    hashed_password = generate_password_hash(password)
+    user = Users(login=login, password=hashed_password, id_role=id_role)
     return add_user(db, user)
 
 
