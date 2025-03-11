@@ -134,7 +134,8 @@ def create_purchase(db: Session, product_id: int, purchase_price: float, id_ware
                         purchase_price=purchase_price,
                         selling_price=selling_price,
                         id_warehouse=id_warehouse,
-                        count=count)
+                        count=count,
+                        current_count=count)
     return add_purchase(db, purchase)
 
 

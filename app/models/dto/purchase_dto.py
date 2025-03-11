@@ -9,6 +9,7 @@ class PurchaseBase(BaseModel):
     purchase_price: float
     id_warehouse: int
     count: int
+    current_count: int
 
 
 class PurchaseDTO(PurchaseBase):

@@ -12,4 +12,5 @@ class ProductBase(BaseModel):
 class ProductDTO(ProductBase):
     id: int
     purchase_id: int
-    count: int
+    total: int
+

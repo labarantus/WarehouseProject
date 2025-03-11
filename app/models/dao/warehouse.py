@@ -49,6 +49,7 @@ class Purchase(Base):
     selling_price = Column(Numeric, nullable=False)
     id_warehouse = Column(Integer, ForeignKey('warehouse.id'))
     count = Column(Integer, default=0)
+    current_count = Column(Integer, default=0)
     created_on = Column(DateTime(), default=datetime.now)
 
 
