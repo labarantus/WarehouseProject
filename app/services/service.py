@@ -31,6 +31,47 @@ def dbexception(db_func):
 
 
 # region
+""" _______PARAMS________ """
+
+
+def add_param(db: Session, param_key: str, val: Optional[float] = None, description: Optional[str] = None) -> bool:
+    param_data = {"key": param_key}
+    if val is not None:
+        param_data["value"] = val
+    if description is not None:
+        param_data["description"] = description
+
+    param = Param(**param_data)
+
+    try:
+        db.add(param)
+        db.commit()
+    except Exception as ex:
+        logging.warning(traceback.format_exc())
+        db.rollback()
+        return False
+    return True
+
+
+@dbexception
+def get_param(db: Session, param_key: str):
+    param = db.query(Param).filter(Param.key == param_key).first()
+    if not param:
+        logging.warning(f"Параметр {param_key} не найден")
+    return param
+
+
+@dbexception
+def update_param_value(db: Session, param_key: str, value: float):
+    param = get_param(db, param_key)
+    if param:
+        param.value = value
+        db.commit()
+
+# endregion
+
+
+# region
 """ _______PRODUCT________ """
 
 
@@ -404,16 +445,16 @@ def delete_transaction_by_product_id(db: Session, id_product: int) -> bool:
 """ _______Expense______ """
 
 
-def create_expense(db: Session, id_type: int, id_product: int, amount: int, id_user: int):
-    transaction = Transaction(id_type=id_type, id_product=id_product, amount=amount, id_user=id_user)
-    return add_transaction(db, transaction)
+def create_expense(db: Session, name: str, cost: float, id_user: int, description: Optional[str] = None):
+    expense = Expense(name=name, cost=cost, description=description, id_user=id_user)
+    return add_expense(db, expense)
 
 
-def add_expense(db: Session, transaction: Transaction) -> bool:
+def add_expense(db: Session, expense: Expense) -> bool:
     try:
-        db.add(transaction)
+        db.add(expense)
         db.commit()
-        print("Success", transaction.id_type, transaction.created_on)
+        print("Success", expense.name, expense.created_on)
 
     except Exception as ex:
         print(traceback.format_exc())

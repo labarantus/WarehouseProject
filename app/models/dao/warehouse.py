@@ -25,6 +25,13 @@ Base = declarative_base()
 '''
 
 
+class Param(Base):
+    __tablename__ = 'params'
+    key = Column(String(100), primary_key=True, unique=True)
+    value = Column(Numeric, nullable=True)
+    description = Column(String(255), nullable=True)
+
+
 class Product(Base):
     __tablename__ = 'product'
     id = Column(Integer, primary_key=True)
@@ -74,6 +81,7 @@ class Expense(Base):
     id = Column(Integer, primary_key=True)
     name = Column(String(100), nullable=False)
     cost = Column(Numeric, nullable=False)  # Сумма расхода
+    id_user = Column(Integer, ForeignKey('users.id'))
     description = Column(String(255), nullable=True)  # Описание расхода
     created_on = Column(DateTime, default=datetime.now)  # Дата расхода
 

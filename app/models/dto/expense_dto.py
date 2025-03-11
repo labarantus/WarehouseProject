@@ -6,8 +6,9 @@ from pydantic import BaseModel
 class ExpenseBase(BaseModel):
     """ DTO для добавление косвенных затрат"""
     name: str
-    description: str
     cost: float
+    id_user: int
+    description: str
 
 
 class ExpenseDTO(ExpenseBase):
