@@ -5,7 +5,7 @@ import random
 """ Данный скрипт заполняет БД тестовыми данными """
 
 ROLE = ['admin', 'user']
-TRANSACTION_TYPE = ['expense', 'sale', 'purchase']
+TRANSACTION_TYPE = ['sale', 'purchase', 'expense']
 
 
 def populate_role(db: Session) -> None:
@@ -23,6 +23,7 @@ if __name__ == "__main__":
         populate_transaction_type(session)
         create_user(session, 'admin', 'qwerty', 1)
         create_user(session, 'user1', 'qwerty', 2)
+        print("DSKFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF")
         create_warehouse(session, 'Карла Маркса, 16', 'Склад 1')
         create_warehouse(session, 'Заки Валиди, 32', 'Склад 2')
         create_category(session, 'Концтовары')
@@ -35,13 +36,13 @@ if __name__ == "__main__":
         create_purchase(session, 2, 5, 2, 90)
         create_purchase(session, 2, 6, 2, 80)
         create_purchase(session, 3, 3, 1, 200)
-        create_transaction(session, 1, 2, 20, 1)
+        create_transaction(session, 1, 1, 20, 1)
+        create_transaction(session, 1, 1, 40, 2)
+        create_transaction(session, 3, 1, 40, 1)
         create_transaction(session, 1, 4, 30, 2)
         create_transaction(session, 1, 6, 40, 2)
-        create_transaction(session, 1, 2, 40, 2)
-        create_transaction(session, 1, 1, 40, 1)
+        create_transaction(session, 1, 2, 100, 1)
         create_transaction(session, 3, 6, 40, 2)
-        create_transaction(session, 3, 2, 40, 1)
         create_transaction(session, 3, 5, 80, 2)
         create_expense(session, "Аренда", 1000, 1)
         create_expense(session, "Комуналка", 200, 1)

@@ -1,6 +1,7 @@
 from typing import Optional, Iterable, List
 from sqlalchemy.orm import Session
 from sqlalchemy.testing.pickleable import User
+from sqlalchemy import desc, asc
 from werkzeug.security import generate_password_hash, check_password_hash
 
 from app.models.dao import *
@@ -123,9 +124,28 @@ def update_product_count(db: Session, product: Product, new_count: int):
 
 
 @dbexception
-def update_current_purchase(db: Session, product: Product, new_purchase_id: int):
+def set_current_purchase(db: Session, product: Product, new_purchase_id: int):
     product.purchase_id = new_purchase_id
     db.commit()
+
+def update_current_purchase(db: Session, product_id: int):
+    next_purchase = (
+        db.query(Purchase)
+        .filter(Purchase.product_id == product_id)  # Фильтр по product_id
+        .filter(Purchase.current_count != 0)  # Только записи, где current_count > 0
+        .order_by(asc(Purchase.created_on))  # Сортируем по дате (от старых к новым)
+        .first()  # Берём самую раннюю запись
+    )
+
+    product = get_product_by_id(db, product_id)
+
+    if next_purchase:
+        product.purchase_id = next_purchase.id
+    else:
+        product.purchase_id = None
+
+
+
 
 
 # можно будет ещё методов сделать для обновления инфы через crud, но мне чет лень
@@ -158,7 +178,7 @@ def add_purchase(db: Session, purchase: Purchase):
             db.commit()
 
             if (product.total_count == 0):
-                update_current_purchase(db, product, purchase.id)
+                set_current_purchase(db, product, purchase.id)
             # обновляем количество товара
             update_product_count(db, product, new_count)
             # создаем транзакцию с закупкой
@@ -185,6 +205,8 @@ def delete_purchase_by_id(db: Session, id_purchase: int):
 
 def get_purchase_by_id(db: Session, id_purchase: int):
     purchase = db.query(Purchase).filter(Purchase.id == id_purchase).first()
+    if not purchase:
+        logging.warning(f"Не найдена закупка с id {id_purchase}")
     print(purchase)
     return purchase
 
@@ -200,6 +222,17 @@ def update_purchase_product(db: Session, id_purchase: int, new_id_product: int):
     purchase = get_purchase_by_id(db, id_purchase)
     purchase.id_product = new_id_product
 
+@dbexception
+def decrease_purchase_count(db: Session, id_purchase: int, delta: int):
+    purchase = get_purchase_by_id(db, id_purchase)
+    new_count = purchase.current_count - delta
+    if new_count < 0:
+        raise RuntimeError("Отрицательное количество товара в партии!")
+    purchase.current_count = new_count
+    db.commit()
+
+    if new_count == 0:
+        update_current_purchase(db, purchase.product_id)
 # endregion
 
 # region
@@ -389,6 +422,10 @@ def add_transaction(db: Session, transaction: Transaction) -> bool:
     try:
         db.add(transaction)
         db.commit()
+
+        if transaction.id_type == 1 or transaction.id_type == 3:
+            decrease_purchase_count(db, transaction.id_purchase, transaction.amount)
+
         print("Success", transaction.id_type, transaction.created_on)
 
     except Exception as ex:

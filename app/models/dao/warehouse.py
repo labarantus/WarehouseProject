@@ -72,7 +72,7 @@ class Transaction(Base):
     id = Column(Integer, primary_key=True)
     id_type = Column(Integer, ForeignKey('types_transaction.id'))
     id_purchase = Column(Integer, ForeignKey('purchase.id'))
-    amount = Column(Numeric, nullable=False)
+    amount = Column(Integer, nullable=False)
     id_user = Column(Integer, ForeignKey('users.id'))
     created_on = Column(DateTime(), default=datetime.now)
 
