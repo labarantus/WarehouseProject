@@ -115,10 +115,18 @@ def update_product_name(db: Session, product_id: int, new_name: str):
     product = get_product_by_id(db, product_id)
     product.name = new_name
 
+
 @dbexception
 def update_product_count(db: Session, product: Product, new_count: int):
-    product = get_product_by_id(db, product.id)
     product.total_count = new_count
+    db.commit()
+
+
+@dbexception
+def update_current_purchase(db: Session, product: Product, new_purchase_id: int):
+    product.purchase_id = new_purchase_id
+    db.commit()
+
 
 # можно будет ещё методов сделать для обновления инфы через crud, но мне чет лень
 # endregion
@@ -142,7 +150,6 @@ def create_purchase(db: Session, product_id: int, purchase_price: float, id_ware
 def add_purchase(db: Session, purchase: Purchase):
 
     product = get_product_by_id(db, purchase.product_id)
-
     if product:
         # увеличиваем количество товара
         new_count = product.total_count + purchase.count
@@ -150,10 +157,13 @@ def add_purchase(db: Session, purchase: Purchase):
             db.add(purchase)
             db.commit()
 
+            if (product.total_count == 0):
+                update_current_purchase(db, product, purchase.id)
             # обновляем количество товара
             update_product_count(db, product, new_count)
             # создаем транзакцию с закупкой
             create_transaction(db, 2, purchase.id, purchase.count, 2)
+
         except Exception as ex:
             logging.warning(f"Ошибка добавления закупки: product {purchase.product_id}, "
                             f"count {purchase.count}, "
