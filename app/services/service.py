@@ -54,20 +54,39 @@ def add_param(db: Session, param_key: str, val: Optional[float] = None, descript
     return True
 
 
-@dbexception
 def get_param(db: Session, param_key: str):
+    """Получает параметр из таблицы params по ключу."""
     param = db.query(Param).filter(Param.key == param_key).first()
-    if not param:
-        logging.warning(f"Параметр {param_key} не найден")
-    return param
+
+    if param is None:
+        return None  # Параметр не найден
+
+    return param  # Возвращаем объект Param
 
 
 @dbexception
-def update_param_value(db: Session, param_key: str, value: float):
+def update_param_value(db: Session, param_key: str, new_value: float):
     param = get_param(db, param_key)
-    if param:
-        param.value = value
-        db.commit()
+
+    if param is None:
+        raise ValueError(f"Параметр с ключом '{param_key}' не найден.")
+
+    param.value = new_value  # Обновляем значение
+    return True  # Возвращаем успех
+
+
+@dbexception
+def increase_param(db: Session, param_key: str, delta: float):
+    param = get_param(db, param_key)
+
+    if param is None:
+        raise ValueError(f"Параметр с ключом '{param_key}' не найден.")
+    if param.value is None:
+        param.value = delta
+    else:
+        param.value += delta
+    return True  # Возвращаем успех
+
 
 # endregion
 
@@ -177,7 +196,7 @@ def add_purchase(db: Session, purchase: Purchase):
             db.add(purchase)
             db.commit()
 
-            if (product.total_count == 0):
+            if product.total_count == 0:
                 set_current_purchase(db, product, purchase.id)
             # обновляем количество товара
             update_product_count(db, product, new_count)
@@ -229,10 +248,22 @@ def decrease_purchase_count(db: Session, id_purchase: int, delta: int):
     if new_count < 0:
         raise RuntimeError("Отрицательное количество товара в партии!")
     purchase.current_count = new_count
+    decrease_total_count(db, purchase.product_id, delta)
+
     db.commit()
 
     if new_count == 0:
         update_current_purchase(db, purchase.product_id)
+
+
+@dbexception
+def decrease_total_count(db: Session, id_product: int, delta: int):
+    product = get_product_by_id(db, id_product)
+    new_count = product.total_count - delta
+    if new_count < 0:
+        raise RuntimeError("Отрицательное общеее количество товара!")
+    product.total_count = new_count
+
 # endregion
 
 # region
@@ -423,8 +454,17 @@ def add_transaction(db: Session, transaction: Transaction) -> bool:
         db.add(transaction)
         db.commit()
 
+        purchase = get_purchase_by_id(db, transaction.id_purchase)
+
         if transaction.id_type == 1 or transaction.id_type == 3:
             decrease_purchase_count(db, transaction.id_purchase, transaction.amount)
+
+        if transaction.id_type == 1:
+            increase_param(db, "Rev", purchase.selling_price * transaction.amount)
+        if transaction.id_type == 2:
+            increase_param(db, "DirectCosts", purchase.purchase_price * transaction.amount)
+        if transaction.id_type == 3:
+            increase_param(db, "IndirectCosts", purchase.purchase_price * transaction.amount)
 
         print("Success", transaction.id_type, transaction.created_on)
 
