@@ -542,6 +542,8 @@ def add_expense(db: Session, expense: Expense) -> bool:
     try:
         db.add(expense)
         db.commit()
+
+        increase_param(db, "IndirectCosts", expense.cost)
         print("Success", expense.name, expense.created_on)
 
     except Exception as ex:
@@ -572,6 +574,7 @@ def get_expense_by_date(db: Session, start_date: datetime, end_date: datetime) -
 def delete_expense_by_id(db: Session, id_expense: int) -> bool:
     """ Удаление пользователя по логину """
     expense = get_expense_by_id(db, id_expense)
+
 
     if expense:
         expense_name = expense.name
