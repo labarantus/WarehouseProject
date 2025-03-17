@@ -8,6 +8,7 @@ from app.models.dao import *
 import functools
 import traceback
 import logging
+import math
 
 
 def dbexception(db_func):
@@ -88,6 +89,21 @@ def increase_param(db: Session, param_key: str, delta: float):
     return True  # Возвращаем успех
 
 
+def calc_period_results(db: Session):
+    rev = get_param(db, "Rev").value
+    vat = get_param(db, "VAT").value / 100
+    direct_sold_costs = get_param(db, "DirectSoldCosts").value
+    indirect_costs = get_param(db, "IndirectCosts").value
+
+    vat_cost = rev * vat / (1 + vat)
+    te = indirect_costs + direct_sold_costs + vat_cost
+    np = rev - te
+
+    update_param_value(db, "NP", np)
+
+    update_param_value(db, "prevIndirectCosts", indirect_costs)
+    update_param_value(db, "prevDirectSoldCosts", direct_sold_costs)
+    update_param_value(db, "TE", te)
 # endregion
 
 
@@ -147,6 +163,7 @@ def set_current_purchase(db: Session, product: Product, new_purchase_id: int):
     product.purchase_id = new_purchase_id
     db.commit()
 
+
 def update_current_purchase(db: Session, product_id: int):
     next_purchase = (
         db.query(Purchase)
@@ -163,11 +180,6 @@ def update_current_purchase(db: Session, product_id: int):
     else:
         product.purchase_id = None
 
-
-
-
-
-# можно будет ещё методов сделать для обновления инфы через crud, но мне чет лень
 # endregion
 
 
@@ -176,7 +188,20 @@ def update_current_purchase(db: Session, product_id: int):
 
 
 def create_purchase(db: Session, product_id: int, purchase_price: float, id_warehouse: int, count: int):
-    selling_price = purchase_price * 3  # Заменить на нормальный расчет цены!!!!!!!!
+    product = get_product_by_id(db, product_id)
+    direct_indirect_ratio = get_param(db, "DirectIndirectRatio").value
+    vat = get_param(db, "VAT").value / 100
+    gm = get_param(db, "GM").value / 100
+
+    # расчет полной себестоимости
+    total_cost = purchase_price + purchase_price * direct_indirect_ratio
+    selling_price = 0
+
+    # если используется метод  FIFO
+    if product.price_mod == 0:
+        # расчет розничной цены
+        selling_price = math.ceil(total_cost * (1 + gm) / (1 - vat))
+
     purchase = Purchase(product_id=product_id,
                         purchase_price=purchase_price,
                         selling_price=selling_price,
@@ -240,6 +265,7 @@ def get_purchase_by_product(db: Session, id_product: int):
 def update_purchase_product(db: Session, id_purchase: int, new_id_product: int):
     purchase = get_purchase_by_id(db, id_purchase)
     purchase.id_product = new_id_product
+
 
 @dbexception
 def decrease_purchase_count(db: Session, id_purchase: int, delta: int):
@@ -461,6 +487,7 @@ def add_transaction(db: Session, transaction: Transaction) -> bool:
 
         if transaction.id_type == 1:
             increase_param(db, "Rev", purchase.selling_price * transaction.amount)
+            increase_param(db, "DirectSoldCosts", purchase.purchase_price * transaction.amount)
         if transaction.id_type == 2:
             increase_param(db, "DirectCosts", purchase.purchase_price * transaction.amount)
         if transaction.id_type == 3:

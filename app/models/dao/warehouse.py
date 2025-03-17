@@ -39,6 +39,11 @@ class Product(Base):
     id_category = Column(Integer, ForeignKey('category.id'))
     total_count = Column(Integer, default=0)
     purchase_id = Column(Integer, ForeignKey('purchase.id'))
+    price_mod = Column(Integer, default=0)
+
+    # price_mod
+    # 0 - FIFO
+    # 1 - средние
 
 
 class Purchase(Base):
@@ -96,7 +101,7 @@ class Users(Base):
     __tablename__ = 'users'
     id = Column(Integer, primary_key=True)
     login = Column(String(100), unique=True, nullable=False)
-    password = Column(String(20), nullable=False)
+    password = Column(String(255), nullable=False)
     id_role = Column(Integer, ForeignKey('role.id'))  # can be admin or user
 
 class Role(Base):

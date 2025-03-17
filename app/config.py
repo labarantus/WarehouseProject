@@ -12,6 +12,8 @@ sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 # Читаем файл конфигурации приложения (в результате будет получен dict-подобный объект)
 app_config = RawConfigParser(interpolation=ExtendedInterpolation())
 app_config.read('C:\\Users\\kinol\\AISlabs\\WarehouseProject\\app.ini')
+# путь на сервере
+# app_config.read('/opt/WarehouseProject/app.ini')
 #app_config.read('C:\\Users\\bl1nk999\\PycharmProjects\\SQL-AIS\\app.ini')
 print("Секции в config.ini:", app_config.sections())
 
