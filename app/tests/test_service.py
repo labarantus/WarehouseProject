@@ -39,17 +39,17 @@ class TestWarehouseService(unittest.TestCase):
 
     def test_get_transaction(self):
         """ Тест функции поиска записи Weather по наименованию населённого пункта """
-        transactions_of_pencil = get_transaction_by_product_id(self.session, id_product=2)
+        transactions_of_pencil = get_transaction_by_id_product(self.session, id_product=2)
         print('ПОиск транзакции',transactions_of_pencil)
         for row in transactions_of_pencil:
             print(row)
             self.assertIsNotNone(row)  # запись должна существовать
-            self.assertTrue(row.id_product == 2)  # идентификатор product_id == 1
+            self.assertTrue(row.id_product == 2)  # идентификатор id_product == 1
 
     def test_delete_transaction(self):
         """ Тест функции удаления записи Transaction по ид товара """
-        delete_transaction_by_product_id(self.session, id_product=1)
-        result = get_transaction_by_product_id(self.session, id_product=1)        # ищем запись по идентификатору товара
+        delete_transaction_by_id_product(self.session, id_product=1)
+        result = get_transaction_by_id_product(self.session, id_product=1)        # ищем запись по идентификатору товара
         self.assertTrue(len(result) == 0)       # запись не должна существовать
 
     def test_upade_product_name(self):

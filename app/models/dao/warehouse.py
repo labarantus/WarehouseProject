@@ -38,7 +38,7 @@ class Product(Base):
     name = Column(String(100), unique=True)
     id_category = Column(Integer, ForeignKey('category.id'))
     total_count = Column(Integer, default=0)
-    purchase_id = Column(Integer, ForeignKey('purchase.id'))
+    id_purchase = Column(Integer, ForeignKey('purchase.id'))
     price_mod = Column(Integer, default=0)
 
     # price_mod
@@ -49,12 +49,13 @@ class Product(Base):
 class Purchase(Base):
     __tablename__ = 'purchase'
     id = Column(Integer, primary_key=True)
-    product_id = Column(Integer, ForeignKey('product.id'))
+    id_product = Column(Integer, ForeignKey('product.id'))
     purchase_price = Column(Numeric, nullable=False)
     selling_price = Column(Numeric, nullable=False)
     id_warehouse = Column(Integer, ForeignKey('warehouse.id'))
     count = Column(Integer, default=0)
     current_count = Column(Integer, default=0)
+    id_user = Column(Integer, ForeignKey('users.id'))
     created_on = Column(DateTime(), default=datetime.now)
 
 

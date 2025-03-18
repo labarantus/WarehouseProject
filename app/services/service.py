@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.testing.pickleable import User
 from sqlalchemy import desc, asc
 from werkzeug.security import generate_password_hash, check_password_hash
+from decimal import Decimal
 
 from app.models.dao import *
 import functools
@@ -147,8 +148,8 @@ def get_product_all(db: Session):
 
 
 @dbexception
-def update_product_name(db: Session, product_id: int, new_name: str):
-    product = get_product_by_id(db, product_id)
+def update_product_name(db: Session, id_product: int, new_name: str):
+    product = get_product_by_id(db, id_product)
     product.name = new_name
 
 
@@ -159,26 +160,26 @@ def update_product_count(db: Session, product: Product, new_count: int):
 
 
 @dbexception
-def set_current_purchase(db: Session, product: Product, new_purchase_id: int):
-    product.purchase_id = new_purchase_id
+def set_current_purchase(db: Session, product: Product, new_id_purchase: int):
+    product.id_purchase = new_id_purchase
     db.commit()
 
 
-def update_current_purchase(db: Session, product_id: int):
+def update_current_purchase(db: Session, id_product: int):
     next_purchase = (
         db.query(Purchase)
-        .filter(Purchase.product_id == product_id)  # Фильтр по product_id
+        .filter(Purchase.id_product == id_product)  # Фильтр по id_product
         .filter(Purchase.current_count != 0)  # Только записи, где current_count > 0
         .order_by(asc(Purchase.created_on))  # Сортируем по дате (от старых к новым)
         .first()  # Берём самую раннюю запись
     )
 
-    product = get_product_by_id(db, product_id)
+    product = get_product_by_id(db, id_product)
 
     if next_purchase:
-        product.purchase_id = next_purchase.id
+        product.id_purchase = next_purchase.id
     else:
-        product.purchase_id = None
+        product.id_purchase = None
 
 # endregion
 
@@ -187,12 +188,13 @@ def update_current_purchase(db: Session, product_id: int):
 """ _______PURCHASE______ """
 
 
-def create_purchase(db: Session, product_id: int, purchase_price: float, id_warehouse: int, count: int):
-    product = get_product_by_id(db, product_id)
+def create_purchase(db: Session, id_product: int, purchase_price: float, id_warehouse: int, count: int, id_user: int):
+    product = get_product_by_id(db, id_product)
     direct_indirect_ratio = get_param(db, "DirectIndirectRatio").value
-    vat = get_param(db, "VAT").value / 100
-    gm = get_param(db, "GM").value / 100
+    vat = get_param(db, "VAT").value / Decimal(100)
+    gm = get_param(db, "GM").value / Decimal(100)
 
+    purchase_price = Decimal(purchase_price)
     # расчет полной себестоимости
     total_cost = purchase_price + purchase_price * direct_indirect_ratio
     selling_price = 0
@@ -202,18 +204,19 @@ def create_purchase(db: Session, product_id: int, purchase_price: float, id_ware
         # расчет розничной цены
         selling_price = math.ceil(total_cost * (1 + gm) / (1 - vat))
 
-    purchase = Purchase(product_id=product_id,
+    purchase = Purchase(id_product=id_product,
                         purchase_price=purchase_price,
                         selling_price=selling_price,
                         id_warehouse=id_warehouse,
                         count=count,
+                        id_user=id_user,
                         current_count=count)
-    return add_purchase(db, purchase)
+    return add_purchase(db, purchase, id_user)
 
 
-def add_purchase(db: Session, purchase: Purchase):
+def add_purchase(db: Session, purchase: Purchase, id_user: int):
 
-    product = get_product_by_id(db, purchase.product_id)
+    product = get_product_by_id(db, purchase.id_product)
     if product:
         # увеличиваем количество товара
         new_count = product.total_count + purchase.count
@@ -226,10 +229,10 @@ def add_purchase(db: Session, purchase: Purchase):
             # обновляем количество товара
             update_product_count(db, product, new_count)
             # создаем транзакцию с закупкой
-            create_transaction(db, 2, purchase.id, purchase.count, 2)
+            create_transaction(db, 2, purchase.id, purchase.count, id_user)
 
         except Exception as ex:
-            logging.warning(f"Ошибка добавления закупки: product {purchase.product_id}, "
+            logging.warning(f"Ошибка добавления закупки: product {purchase.id_product}, "
                             f"count {purchase.count}, "
                             f"purchase_price{purchase.purchase_price}.")
             logging.warning(traceback.format_exc())
@@ -237,7 +240,7 @@ def add_purchase(db: Session, purchase: Purchase):
             return False
         return True
     else:
-        logging.warning(f"Закупка не существующего товар {purchase.product_id}.")
+        logging.warning(f"Закупка не существующего товар {purchase.id_product}.")
         return False
 
 
@@ -256,7 +259,7 @@ def get_purchase_by_id(db: Session, id_purchase: int):
 
 
 def get_purchase_by_product(db: Session, id_product: int):
-    purchases = db.query(Product).filter(Purchase.id_product == id_product).all()
+    purchases = db.query(Purchase).filter(Purchase.id_product == id_product).all()
     print(purchases)
     return purchases
 
@@ -268,18 +271,24 @@ def update_purchase_product(db: Session, id_purchase: int, new_id_product: int):
 
 
 @dbexception
+def update_purchase_warehouse(db: Session, id_purchase: int, new_id_warehouse: int):
+    purchase = get_purchase_by_id(db, id_purchase)
+    purchase.id_warehouse = new_id_warehouse
+
+
+@dbexception
 def decrease_purchase_count(db: Session, id_purchase: int, delta: int):
     purchase = get_purchase_by_id(db, id_purchase)
     new_count = purchase.current_count - delta
     if new_count < 0:
         raise RuntimeError("Отрицательное количество товара в партии!")
     purchase.current_count = new_count
-    decrease_total_count(db, purchase.product_id, delta)
+    decrease_total_count(db, purchase.id_product, delta)
 
     db.commit()
 
     if new_count == 0:
-        update_current_purchase(db, purchase.product_id)
+        update_current_purchase(db, purchase.id_product)
 
 
 @dbexception
@@ -320,14 +329,14 @@ def get_warehouse_by_id(db: Session, id_warehouse: int):
 
 
 @dbexception
-def update_warehouse_name(db: Session, warehouse_id: int, new_name: str):
-    warehouse = get_warehouse_by_id(db, warehouse_id)
+def update_warehouse_name(db: Session, id_warehouse: int, new_name: str):
+    warehouse = get_warehouse_by_id(db, id_warehouse)
     warehouse.name = new_name
 
 
 @dbexception
-def update_warehouse_address(db: Session, warehouse_id: int, new_address: str):
-    warehouse = get_warehouse_by_id(db, warehouse_id)
+def update_warehouse_address(db: Session, id_warehouse: int, new_address: str):
+    warehouse = get_warehouse_by_id(db, id_warehouse)
     warehouse.address = new_address
 
 # endregion
@@ -354,8 +363,8 @@ def get_category_by_id(db: Session, id_category: int):
 
 
 @dbexception
-def update_category_name(db: Session, category_id: int, new_name: str):
-    category = get_category_by_id(db, category_id)
+def update_category_name(db: Session, id_category: int, new_name: str):
+    category = get_category_by_id(db, id_category)
     category.name = new_name
 
 # endregion
@@ -504,21 +513,20 @@ def add_transaction(db: Session, transaction: Transaction) -> bool:
     return True
 
 
-@dbexception
-def get_transactions_by_product_id(db: Session, id_product: int) -> List[Transaction]:
+def get_transactions_by_id_product(db: Session, id_product: int) -> List[Transaction]:
     try:
         # Шаг 1: Найдем все закупки, связанные с данным товаром
-        purchases = db.query(Purchase).filter(Purchase.product_id == id_product).all()
+        purchases = db.query(Purchase).filter(Purchase.id_product == id_product).all()
 
         if not purchases:
             print(f"Не найдено закупок для товара с id {id_product}")
             return []
 
         # Шаг 2: Получаем список ids закупок для данного товара
-        purchase_ids = [purchase.id for purchase in purchases]
+        id_purchases = [purchase.id for purchase in purchases]
 
         # Шаг 3: Находим все транзакции, связанные с найденными закупками
-        transactions = db.query(Transaction).filter(Transaction.id_purchase.in_(purchase_ids)).all()
+        transactions = db.query(Transaction).filter(Transaction.id_purchase.in_(id_purchases)).all()
 
         if not transactions:
             print(f"Не найдено транзакций для товара с id {id_product}")
@@ -532,10 +540,34 @@ def get_transactions_by_product_id(db: Session, id_product: int) -> List[Transac
         return []
 
 
+def get_transactions_by_type(db: Session, id_type: int):
+    try:
+
+        # Шаг 3: Находим все транзакции, связанные с найденными закупками
+        transactions = db.query(Transaction).filter(Transaction.id_type == id_type).all()
+
+        if not transactions:
+            print(f"Не найдено транзакций типа {id_type}")
+            return []
+
+        print(transactions)
+        print(len(transactions))
+        # Возвращаем все найденные транзакции
+        return transactions
+
+    except Exception as ex:
+        print("Ошибка при получении транзакций:", ex)
+        return []
+
+def get_transactions_all(db: Session):
+    transactions = db.query(Transaction).all()
+    print(transactions)
+    return transactions
+
 @dbexception
-def delete_transaction_by_product_id(db: Session, id_product: int) -> bool:
+def delete_transaction_by_id_product(db: Session, id_product: int) -> bool:
     """ Удаление записей о транзакциях для указанного товара """
-    transactions = get_transactions_by_product_id(db, id_product)
+    transactions = get_transactions_by_id_product(db, id_product)
 
     if not transactions:
         logging.warning(f"Транзакции для товара с ID {id_product} не найдены.")
@@ -545,7 +577,7 @@ def delete_transaction_by_product_id(db: Session, id_product: int) -> bool:
 
     try:
         # Используем один запрос для удаления всех транзакций
-        db.query(Transaction).filter(Transaction.product_id == id_product).delete(synchronize_session=False)
+        db.query(Transaction).filter(Transaction.id_product == id_product).delete(synchronize_session=False)
         db.commit()  # Зафиксировать изменения в базе данных
         logging.info(f"Транзакции для товара с ID {id_product} успешно удалены.")
         return True
@@ -582,9 +614,9 @@ def add_expense(db: Session, expense: Expense) -> bool:
     return True
 
 
-def get_expense_by_id(db: Session, expense_id: int):
+def get_expense_by_id(db: Session, id_expense: int):
     """ Получение записи о расходах по ID """
-    expense = db.query(Expense).filter(Expense.id == expense_id).first()
+    expense = db.query(Expense).filter(Expense.id == id_expense).first()
     return expense
 
 

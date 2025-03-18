@@ -5,14 +5,15 @@ from pydantic import BaseModel
 
 class PurchaseBase(BaseModel):
     """ DTO для добавление закупки товара"""
-    product_id: int
+    id_product: int
     purchase_price: float
     id_warehouse: int
     count: int
-    current_count: int
+    id_user: int
 
 
 class PurchaseDTO(PurchaseBase):
     id: int
     selling_price: float
+    current_count: int
     created_on: datetime

@@ -11,6 +11,6 @@ class ProductBase(BaseModel):
 
 class ProductDTO(ProductBase):
     id: int
-    purchase_id: int
+    id_purchase: int
     total: int
 
