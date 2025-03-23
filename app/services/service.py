@@ -165,19 +165,28 @@ def set_current_purchase(db: Session, product: Product, new_id_purchase: int):
     db.commit()
 
 
-def update_current_purchase(db: Session, id_product: int):
+def find_next_purchase(db: Session, id_product: int, id_current_purchase: int):
     next_purchase = (
         db.query(Purchase)
         .filter(Purchase.id_product == id_product)  # Фильтр по id_product
-        .filter(Purchase.current_count != 0)  # Только записи, где current_count > 0
+        .filter(Purchase.current_count != 0)
+        .filter(Purchase.id != id_current_purchase)# Только записи, где current_count > 0
         .order_by(asc(Purchase.created_on))  # Сортируем по дате (от старых к новым)
         .first()  # Берём самую раннюю запись
     )
 
+    if next_purchase:
+        return next_purchase.id
+    else:
+        return None
+
+
+def update_current_purchase(db: Session, id_product: int):
     product = get_product_by_id(db, id_product)
+    next_purchase = find_next_purchase(db, id_product, product.id_purchase)
 
     if next_purchase:
-        product.id_purchase = next_purchase.id
+        set_current_purchase(db, product, next_purchase)
     else:
         product.id_purchase = None
 
@@ -276,19 +285,31 @@ def update_purchase_warehouse(db: Session, id_purchase: int, new_id_warehouse: i
     purchase.id_warehouse = new_id_warehouse
 
 
-@dbexception
 def decrease_purchase_count(db: Session, id_purchase: int, delta: int):
     purchase = get_purchase_by_id(db, id_purchase)
     new_count = purchase.current_count - delta
+    rest = abs(new_count) if new_count < 0 else 0
+    next_purchase = 0
     if new_count < 0:
-        raise RuntimeError("Отрицательное количество товара в партии!")
+        next_purchase = find_next_purchase(db, purchase.id_product, purchase.id)
+        if next_purchase is None:
+            raise RuntimeError("Размер списания превышает общий остаток товара!")
+
+    if rest > 0:
+        decrease_total_count(db, purchase.id_product, purchase.current_count)
+        purchase.current_count = 0
+        update_current_purchase(db, purchase.id_product)
+        db.commit()
+        return rest, next_purchase  # возвращаем остаток, для которого необходима дополнительная транзакция
+
     purchase.current_count = new_count
     decrease_total_count(db, purchase.id_product, delta)
-
     db.commit()
 
     if new_count == 0:
         update_current_purchase(db, purchase.id_product)
+
+    return 0, 0
 
 
 @dbexception
@@ -481,6 +502,7 @@ def add_transaction_type(db: Session, type_name: str) -> bool:
 
 def create_transaction(db: Session, id_type: int, id_purchase: int, amount: int, id_user: int):
     transaction = Transaction(id_type=id_type, id_purchase=id_purchase, amount=amount, id_user=id_user)
+
     return add_transaction(db, transaction)
 
 
@@ -491,8 +513,12 @@ def add_transaction(db: Session, transaction: Transaction) -> bool:
 
         purchase = get_purchase_by_id(db, transaction.id_purchase)
 
+        rest = 0
+        next_purchase = 0
         if transaction.id_type == 1 or transaction.id_type == 3:
-            decrease_purchase_count(db, transaction.id_purchase, transaction.amount)
+            rest, next_purchase = decrease_purchase_count(db, transaction.id_purchase, transaction.amount)
+            if rest > 0:
+                transaction.amount = transaction.amount - rest
 
         if transaction.id_type == 1:
             increase_param(db, "Rev", purchase.selling_price * transaction.amount)
@@ -501,6 +527,9 @@ def add_transaction(db: Session, transaction: Transaction) -> bool:
             increase_param(db, "DirectCosts", purchase.purchase_price * transaction.amount)
         if transaction.id_type == 3:
             increase_param(db, "IndirectCosts", purchase.purchase_price * transaction.amount)
+
+        if rest > 0:
+            create_transaction(db, transaction.id_type, next_purchase, rest, transaction.id_user)
 
         print("Success", transaction.id_type, transaction.created_on)
 
