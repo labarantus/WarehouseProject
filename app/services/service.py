@@ -285,15 +285,19 @@ def update_purchase_warehouse(db: Session, id_purchase: int, new_id_warehouse: i
     purchase.id_warehouse = new_id_warehouse
 
 
-def decrease_purchase_count(db: Session, id_purchase: int, delta: int):
+def decrease_purchase_count(db: Session, id_purchase: int, delta: int, transaction_type: int):
     purchase = get_purchase_by_id(db, id_purchase)
     new_count = purchase.current_count - delta
     rest = abs(new_count) if new_count < 0 else 0
     next_purchase = 0
     if new_count < 0:
+        if transaction_type == 3:
+            raise RuntimeError("Размер списания превышает размер партии")
+
         next_purchase = find_next_purchase(db, purchase.id_product, purchase.id)
+
         if next_purchase is None:
-            raise RuntimeError("Размер списания превышает общий остаток товара!")
+            raise RuntimeError("Размер реализации превышает общий остаток товара")
 
     if rest > 0:
         decrease_total_count(db, purchase.id_product, purchase.current_count)
@@ -515,17 +519,18 @@ def add_transaction(db: Session, transaction: Transaction) -> bool:
 
         rest = 0
         next_purchase = 0
-        if transaction.id_type == 1 or transaction.id_type == 3:
-            rest, next_purchase = decrease_purchase_count(db, transaction.id_purchase, transaction.amount)
+
+        if transaction.id_type == 1:
+            rest, next_purchase = decrease_purchase_count(db, transaction.id_purchase, transaction.amount, transaction.id_type)
             if rest > 0:
                 transaction.amount = transaction.amount - rest
 
-        if transaction.id_type == 1:
             increase_param(db, "Rev", purchase.selling_price * transaction.amount)
             increase_param(db, "DirectSoldCosts", purchase.purchase_price * transaction.amount)
         if transaction.id_type == 2:
             increase_param(db, "DirectCosts", purchase.purchase_price * transaction.amount)
         if transaction.id_type == 3:
+            decrease_purchase_count(db, transaction.id_purchase, transaction.amount, transaction.id_type)
             increase_param(db, "IndirectCosts", purchase.purchase_price * transaction.amount)
 
         if rest > 0:
