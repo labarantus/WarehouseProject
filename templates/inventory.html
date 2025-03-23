@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Склад - Система Управления Запасами</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.3/font/bootstrap-icons.css">
+    <!-- Custom CSS -->
+    <link href="{{ url_for('static', path='/css/inventory.css') }}" rel="stylesheet">
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-auto sidebar">
+                <div class="sidebar-header">
+                    <h4>Склад</h4>
+                </div>
+                <ul class="nav flex-column">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="#" data-tab="products">
+                            <i class="bi bi-box"></i> Товары
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" data-tab="purchases">
+                            <i class="bi bi-cart-plus"></i> Закупки
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" data-tab="sales">
+                            <i class="bi bi-cash-coin"></i> Реализация
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" data-tab="writeoffs">
+                            <i class="bi bi-trash"></i> Списания
+                        </a>
+                    </li>
+                </ul>
+
+                <div class="sidebar-footer">
+                    <div class="user-info">
+                        <i class="bi bi-person-circle"></i>
+                        <span id="username">Пользователь</span>
+                    </div>
+                    <button class="btn btn-outline-danger btn-sm w-100 mt-2" id="logoutButton">
+                        <i class="bi bi-box-arrow-right"></i> Выйти
+                    </button>
+                </div>
+            </div>
+
+            <!-- Main Content -->
+            <div class="col main-content">
+                <div class="header">
+                    <h1>Управление складом</h1>
+                    <div class="search-bar">
+                        <input type="text" class="form-control" placeholder="Поиск..." id="searchInput">
+                        <button class="btn btn-primary ms-2" id="searchButton">
+                            <i class="bi bi-search"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Tab Content -->
+                <div class="tab-content">
+                    <!-- Products Tab -->
+                    <div id="products" class="tab-pane active">
+                        <div class="tab-header d-flex justify-content-between align-items-center mb-3">
+                            <h4 class="mb-0">Список товаров</h4>
+                            <button class="btn btn-success" id="addProductButton">
+                                <i class="bi bi-plus"></i> Добавить товар
+                            </button>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Наименование</th>
+                                        <th>Категория</th>
+                                        <th>Общее количество</th>
+                                        <th>Действия</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="productsTableBody">
+                                    <!-- Данные будут загружены через JavaScript -->
+                                    <tr>
+                                        <td colspan="5" class="text-center">Загрузка данных...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Purchases Tab -->
+                    <div id="purchases" class="tab-pane">
+                        <div class="tab-header d-flex justify-content-between align-items-center mb-3">
+                            <h4 class="mb-0">Закупки товаров</h4>
+                            <button class="btn btn-primary" id="addPurchaseButton">
+                                <i class="bi bi-plus"></i> Новая закупка
+                            </button>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Товар</th>
+                                        <th>Дата закупки</th>
+                                        <th>Закупочная цена</th>
+                                        <th>Розничная цена</th>
+                                        <th>Склад</th>
+                                        <th>Начальное кол-во</th>
+                                        <th>Текущее кол-во</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="purchasesTableBody">
+                                    <!-- Данные будут загружены через JavaScript -->
+                                    <tr>
+                                        <td colspan="8" class="text-center">Загрузка данных закупок...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Sales Tab -->
+                    <div id="sales" class="tab-pane">
+                        <div class="tab-header d-flex justify-content-between align-items-center mb-3">
+                            <h4 class="mb-0">Реализация товаров</h4>
+                            <button class="btn btn-success" id="addSaleButton">
+                                <i class="bi bi-plus"></i> Новая реализация
+                            </button>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Дата</th>
+                                        <th>Товар</th>
+                                        <th>Количество</th>
+                                        <th>Цена реализации</th>
+                                        <th>Сумма</th>
+                                        <th>Пользователь</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="salesTableBody">
+                                    <!-- Данные будут загружены через JavaScript -->
+                                    <tr>
+                                        <td colspan="7" class="text-center">Загрузка данных реализаций...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Write-offs Tab -->
+                    <div id="writeoffs" class="tab-pane">
+                        <div class="tab-header d-flex justify-content-between align-items-center mb-3">
+                            <h4 class="mb-0">Списания товаров</h4>
+                            <button class="btn btn-danger" id="addWriteoffButton">
+                                <i class="bi bi-plus"></i> Новое списание
+                            </button>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Дата</th>
+                                        <th>Товар</th>
+                                        <th>Количество</th>
+                                        <th>Стоимость потерь</th>
+                                        <th>Пользователь</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="writeoffsTableBody">
+                                    <!-- Данные будут загружены через JavaScript -->
+                                    <tr>
+                                        <td colspan="6" class="text-center">Загрузка данных списаний...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Product Modal -->
+    <div class="modal fade" id="addProductModal" tabindex="-1" aria-labelledby="addProductModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addProductModalLabel">Добавление нового товара</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="addProductForm">
+                        <!-- Product Name -->
+                        <div class="mb-3">
+                            <label for="productName" class="form-label">Наименование товара</label>
+                            <input type="text" class="form-control" id="productName" required>
+                        </div>
+
+                        <!-- Category -->
+                        <div class="mb-3">
+                            <label for="productCategory" class="form-label">Категория</label>
+                            <select class="form-select" id="productCategory" required>
+                                <option value="" disabled selected>Выберите категорию</option>
+                                <option value="1">Концтовары</option>
+                                <!-- Categories will be loaded dynamically -->
+                            </select>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="button" class="btn btn-primary" id="saveProductButton">
+                        <i class="bi bi-plus-circle me-1"></i>Добавить товар
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Purchase Modal -->
+    <div class="modal fade" id="addPurchaseModal" tabindex="-1" aria-labelledby="addPurchaseModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addPurchaseModalLabel">Добавление новой закупки</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="addPurchaseForm">
+                        <!-- Product -->
+                        <div class="mb-3">
+                            <label for="purchaseProduct" class="form-label">Товар</label>
+                            <select class="form-select" id="purchaseProduct" required>
+                                <option value="" disabled selected>Выберите товар</option>
+                                <!-- Products will be loaded dynamically -->
+                            </select>
+                        </div>
+
+                        <!-- Price -->
+                        <div class="mb-3">
+                            <label for="purchasePrice" class="form-label">Закупочная цена</label>
+                            <div class="input-group">
+                                <input type="number" class="form-control" id="purchasePrice" step="0.01" min="0.01" required>
+                                <span class="input-group-text">₽</span>
+                            </div>
+                        </div>
+
+                        <!-- Quantity -->
+                        <div class="mb-3">
+                            <label for="purchaseQuantity" class="form-label">Количество</label>
+                            <input type="number" class="form-control" id="purchaseQuantity" min="1" value="1" required>
+                        </div>
+
+                        <!-- Warehouse -->
+                        <div class="mb-3">
+                            <label for="purchaseWarehouse" class="form-label">Склад</label>
+                            <select class="form-select" id="purchaseWarehouse" required>
+                                <option value="" disabled selected>Выберите склад</option>
+                                <!-- Warehouses will be loaded dynamically -->
+                            </select>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="button" class="btn btn-primary" id="savePurchaseButton">
+                        <i class="bi bi-plus-circle me-1"></i>Добавить закупку
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Sale Modal -->
+    <div class="modal fade" id="addSaleModal" tabindex="-1" aria-labelledby="addSaleModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addSaleModalLabel">Реализация товара</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="addSaleForm">
+                        <!-- Product -->
+                        <div class="mb-3">
+                            <label for="saleProduct" class="form-label">Товар</label>
+                            <select class="form-select" id="saleProduct" required>
+                                <option value="" disabled selected>Выберите товар</option>
+                                <!-- Products will be loaded dynamically -->
+                            </select>
+                        </div>
+
+                        <!-- Available Quantity -->
+                        <div class="mb-3">
+                            <label class="form-label">Доступное количество</label>
+                            <div class="form-control bg-light" id="saleAvailableQuantity">0</div>
+                        </div>
+
+                        <!-- Quantity -->
+                        <div class="mb-3">
+                            <label for="saleQuantity" class="form-label">Количество для реализации</label>
+                            <input type="number" class="form-control" id="saleQuantity" min="1" value="1" required>
+                        </div>
+
+                        <!-- Price -->
+                        <div class="mb-3">
+                            <label for="salePrice" class="form-label">Цена реализации</label>
+                            <div class="input-group">
+                                <input type="number" class="form-control" id="salePrice" step="0.01" min="0.01" required>
+                                <span class="input-group-text">₽</span>
+                            </div>
+                        </div>
+
+                        <!-- Total -->
+                        <div class="mb-3">
+                            <label class="form-label">Итого</label>
+                            <div class="alert alert-success py-2" id="saleTotal">0.00 ₽</div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="button" class="btn btn-success" id="saveSaleButton">
+                        <i class="bi bi-check me-1"></i>Оформить реализацию
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Write-off Modal -->
+    <div class="modal fade" id="addWriteoffModal" tabindex="-1" aria-labelledby="addWriteoffModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addWriteoffModalLabel">Списание товара</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="addWriteoffForm">
+                        <!-- Product -->
+                        <div class="mb-3">
+                            <label for="writeoffProduct" class="form-label">Товар</label>
+                            <select class="form-select" id="writeoffProduct" required>
+                                <option value="" disabled selected>Выберите товар</option>
+                                <!-- Products will be loaded dynamically -->
+                            </select>
+                        </div>
+
+                        <!-- Available Quantity -->
+                        <div class="mb-3">
+                            <label class="form-label">Доступное количество</label>
+                            <div class="form-control bg-light" id="writeoffAvailableQuantity">0</div>
+                        </div>
+
+                        <!-- Quantity -->
+                        <div class="mb-3">
+                            <label for="writeoffQuantity" class="form-label">Количество для списания</label>
+                            <input type="number" class="form-control" id="writeoffQuantity" min="1" value="1" required>
+                        </div>
+
+                        <!-- Total Loss -->
+                        <div class="mb-3">
+                            <label class="form-label">Стоимость потерь</label>
+                            <div class="alert alert-danger py-2" id="writeoffTotal">0.00 ₽</div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="button" class="btn btn-danger" id="saveWriteoffButton">
+                        <i class="bi bi-check me-1"></i>Оформить списание
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Custom JS -->
+    <script src="{{ url_for('static', path='/js/inventory.js') }}"></script>
+</body>
+</html>

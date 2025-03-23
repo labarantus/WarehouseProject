@@ -105,6 +105,8 @@ def calc_period_results(db: Session):
     update_param_value(db, "prevIndirectCosts", indirect_costs)
     update_param_value(db, "prevDirectSoldCosts", direct_sold_costs)
     update_param_value(db, "TE", te)
+
+
 # endregion
 
 
@@ -181,6 +183,7 @@ def update_current_purchase(db: Session, id_product: int):
     else:
         product.id_purchase = None
 
+
 # endregion
 
 
@@ -215,7 +218,6 @@ def create_purchase(db: Session, id_product: int, purchase_price: float, id_ware
 
 
 def add_purchase(db: Session, purchase: Purchase, id_user: int):
-
     product = get_product_by_id(db, purchase.id_product)
     if product:
         # увеличиваем количество товара
@@ -299,6 +301,7 @@ def decrease_total_count(db: Session, id_product: int, delta: int):
         raise RuntimeError("Отрицательное общеее количество товара!")
     product.total_count = new_count
 
+
 # endregion
 
 # region
@@ -328,6 +331,11 @@ def get_warehouse_by_id(db: Session, id_warehouse: int):
     return warehouse
 
 
+def get_warehouses(db: Session):
+    warehouse = db.query(Warehouse).all()
+    return warehouse
+
+
 @dbexception
 def update_warehouse_name(db: Session, id_warehouse: int, new_name: str):
     warehouse = get_warehouse_by_id(db, id_warehouse)
@@ -338,6 +346,7 @@ def update_warehouse_name(db: Session, id_warehouse: int, new_name: str):
 def update_warehouse_address(db: Session, id_warehouse: int, new_address: str):
     warehouse = get_warehouse_by_id(db, id_warehouse)
     warehouse.address = new_address
+
 
 # endregion
 
@@ -362,10 +371,17 @@ def get_category_by_id(db: Session, id_category: int):
     return category
 
 
+def get_all_categories(db: Session):
+    """Получение списка всех категорий товаров"""
+    categories = db.query(Category).all()
+    return categories
+
+
 @dbexception
 def update_category_name(db: Session, id_category: int, new_name: str):
     category = get_category_by_id(db, id_category)
     category.name = new_name
+
 
 # endregion
 
@@ -430,6 +446,7 @@ def update_user_role(db: Session, login_user: str, role: int):
     user.id_role = role
     return True
 
+
 # endregion
 
 
@@ -449,6 +466,7 @@ def add_role(db: Session, role_name: str) -> bool:
         print("Failed")
         return False
     return True
+
 
 # endregion
 
@@ -471,6 +489,7 @@ def add_transaction_type(db: Session, type_name: str) -> bool:
         return False
 
     return True
+
 
 # endregion
 
@@ -559,10 +578,12 @@ def get_transactions_by_type(db: Session, id_type: int):
         print("Ошибка при получении транзакций:", ex)
         return []
 
+
 def get_transactions_all(db: Session):
     transactions = db.query(Transaction).all()
     print(transactions)
     return transactions
+
 
 @dbexception
 def delete_transaction_by_id_product(db: Session, id_product: int) -> bool:
@@ -585,6 +606,7 @@ def delete_transaction_by_id_product(db: Session, id_product: int) -> bool:
         db.rollback()
         logging.error(f"Ошибка при удалении транзакций для товара с ID {id_product}: {traceback.format_exc()}")
         return False
+
 
 # endregion
 
@@ -634,7 +656,6 @@ def delete_expense_by_id(db: Session, id_expense: int) -> bool:
     """ Удаление пользователя по логину """
     expense = get_expense_by_id(db, id_expense)
 
-
     if expense:
         expense_name = expense.name
         date = expense.created_on
@@ -645,6 +666,5 @@ def delete_expense_by_id(db: Session, id_expense: int) -> bool:
     else:
         logging.warning(f"Запись о расходах {int} не найдена.")
         return False
-
 
 # endregion

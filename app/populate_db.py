@@ -41,6 +41,7 @@ if __name__ == "__main__":
         create_warehouse(session, 'Карла Маркса, 16', 'Склад 1')
         create_warehouse(session, 'Заки Валиди, 32', 'Склад 2')
         create_category(session, 'Концтовары')
+        create_category(session, 'Обувь')
         create_product(session, 'Шариковая ручка MS Gold', 1)
         create_product(session, 'Тетрадь в клетку 48 л', 1)
         create_product(session, 'Простой карандаш', 1)
