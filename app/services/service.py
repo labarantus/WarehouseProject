@@ -176,6 +176,7 @@ def find_next_purchase(db: Session, id_product: int, id_current_purchase: int):
         .order_by(asc(Purchase.created_on))  # Сортируем по дате (от старых к новым)
         .first()  # Берём самую раннюю запись
     )
+    print("Эта партия товаров кончилась, теперь списываем с партии номер: ", next_purchase)
 
     if next_purchase:
         return next_purchase.id
@@ -211,7 +212,7 @@ def create_purchase(db: Session, id_product: int, purchase_price: float, id_ware
     total_cost = purchase_price + purchase_price * direct_indirect_ratio
     selling_price = 0
 
-    # если используется метод  FIFO
+    # если используется метод FIFO
     if product.price_mod == 0:
         # расчет розничной цены
         selling_price = math.ceil(total_cost * (1 + gm) / (1 - vat))

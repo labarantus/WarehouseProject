@@ -348,6 +348,7 @@
                     <h5 class="modal-title" id="addWriteoffModalLabel">Списание товара</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
+                <!-- Модифицированная форма списания товара -->
                 <div class="modal-body">
                     <form id="addWriteoffForm">
                         <!-- Product -->
@@ -359,10 +360,13 @@
                             </select>
                         </div>
 
-                        <!-- Available Quantity -->
+                        <!-- Purchase Batch - Добавляем выбор партии -->
                         <div class="mb-3">
-                            <label class="form-label">Доступное количество</label>
-                            <div class="form-control bg-light" id="writeoffAvailableQuantity">0</div>
+                            <label for="writeoffPurchase" class="form-label">Партия</label>
+                            <select class="form-select" id="writeoffPurchase" required>
+                                <option value="" disabled selected>Сначала выберите товар</option>
+                                <!-- Purchases will be loaded dynamically -->
+                            </select>
                         </div>
 
                         <!-- Quantity -->

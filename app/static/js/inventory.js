@@ -24,11 +24,15 @@ document.addEventListener('DOMContentLoaded', function () {
     // Check authentication
     checkAuthentication();
 
+    setupWriteoffEventHandlers();
+
     // Load initial data
     loadProductsData();
 
     // Setup buttons and form handlers
     setupButtons();
+
+
 });
 
 // Setup navigation
@@ -38,7 +42,7 @@ function setupNavigation() {
 
     // Add click event to each link
     navLinks.forEach(link => {
-        link.addEventListener('click', function(event) {
+        link.addEventListener('click', function (event) {
             event.preventDefault();
 
             // Get tab ID
@@ -118,7 +122,7 @@ function setupButtons() {
     // Add product button in the Products tab header
     const addProductButton = document.getElementById('addProductButton');
     if (addProductButton) {
-        addProductButton.addEventListener('click', function() {
+        addProductButton.addEventListener('click', function () {
             // Reset form
             const form = document.getElementById('addProductForm');
             if (form) form.reset();
@@ -140,7 +144,7 @@ function setupButtons() {
     // Add purchase button
     const addPurchaseButton = document.getElementById('addPurchaseButton');
     if (addPurchaseButton) {
-        addPurchaseButton.addEventListener('click', function() {
+        addPurchaseButton.addEventListener('click', function () {
             // Reset form
             const form = document.getElementById('addPurchaseForm');
             if (form) form.reset();
@@ -163,7 +167,7 @@ function setupButtons() {
     // Add sale button
     const addSaleButton = document.getElementById('addSaleButton');
     if (addSaleButton) {
-        addSaleButton.addEventListener('click', function() {
+        addSaleButton.addEventListener('click', function () {
             // Reset form
             const form = document.getElementById('addSaleForm');
             if (form) form.reset();
@@ -203,7 +207,7 @@ function setupButtons() {
     // Add writeoff button
     const addWriteoffButton = document.getElementById('addWriteoffButton');
     if (addWriteoffButton) {
-        addWriteoffButton.addEventListener('click', function() {
+        addWriteoffButton.addEventListener('click', function () {
             // Reset form
             const form = document.getElementById('addWriteoffForm');
             if (form) form.reset();
@@ -237,7 +241,7 @@ function setupButtons() {
     // Logout button
     const logoutButton = document.getElementById('logoutButton');
     if (logoutButton) {
-        logoutButton.addEventListener('click', function() {
+        logoutButton.addEventListener('click', function () {
             // Clear session storage
             sessionStorage.removeItem('warehouseAuthToken');
             sessionStorage.removeItem('warehouseUserLogin');
@@ -252,7 +256,7 @@ function setupButtons() {
     // Search button
     const searchButton = document.getElementById('searchButton');
     if (searchButton) {
-        searchButton.addEventListener('click', function() {
+        searchButton.addEventListener('click', function () {
             const searchInput = document.getElementById('searchInput');
             if (searchInput) {
                 const searchTerm = searchInput.value.toLowerCase();
@@ -261,6 +265,7 @@ function setupButtons() {
         });
     }
 }
+
 // Load products data
 async function loadProductsData() {
     const tableBody = document.getElementById('productsTableBody');
@@ -341,6 +346,7 @@ async function loadProductsData() {
         tableBody.innerHTML = `<tr><td colspan="5" class="text-center text-danger">Ошибка: ${error.message}</td></tr>`;
     }
 }
+
 /// Load purchases data
 async function loadPurchasesData() {
     const tableBody = document.getElementById('purchasesTableBody');
@@ -410,8 +416,8 @@ async function loadPurchasesData() {
 
         // Add each purchase to the table
         for (const purchase of allPurchases) {
-            const product = productsMap[purchase.id_product] || { name: purchase.product_name || 'Неизвестный товар' };
-            const warehouse = warehousesMap[purchase.id_warehouse] || { name: 'Склад ' + (purchase.id_warehouse || 'Неизвестный') };
+            const product = productsMap[purchase.id_product] || {name: purchase.product_name || 'Неизвестный товар'};
+            const warehouse = warehousesMap[purchase.id_warehouse] || {name: 'Склад ' + (purchase.id_warehouse || 'Неизвестный')};
 
             // Format date
             const purchaseDate = new Date(purchase.created_on).toLocaleDateString('ru-RU');
@@ -617,6 +623,7 @@ async function loadWriteoffsData() {
         tableBody.innerHTML = `<tr><td colspan="6" class="text-center text-danger">Ошибка: ${error.message}</td></tr>`;
     }
 }
+
 // Load categories for product form
 async function loadCategories() {
     try {
@@ -799,8 +806,8 @@ async function loadWarehousesForPurchase() {
             console.warn('Не удалось загрузить список складов через API:', error);
             // If API unavailable, add default warehouses
             warehouses = [
-                { id: 1, name: 'Склад 1', address: 'Карла Маркса, 16' },
-                { id: 2, name: 'Склад 2', address: 'Заки Валиди, 32' }
+                {id: 1, name: 'Склад 1', address: 'Карла Маркса, 16'},
+                {id: 2, name: 'Склад 2', address: 'Заки Валиди, 32'}
             ];
         }
 
@@ -962,12 +969,16 @@ async function loadProductsForSale() {
 
                         // Store the latest purchase ID and price for this product
                         if (purchases.length > 0) {
-                            const latestPurchase = purchases.reduce((latest, purchase) => {
-                                return new Date(purchase.created_on) > new Date(latest.created_on) ? purchase : latest;
-                            }, purchases[0]);
+                            // Сортируем закупки от старых к новым
+                            const sortedPurchases = purchases
+                                .filter(purchase => purchase.current_count > 0)  // Только с ненулевым остатком
+                                .sort((a, b) => new Date(a.created_on) - new Date(b.created_on));
 
-                            option.dataset.purchaseId = latestPurchase.id;
-                            option.dataset.sellingPrice = latestPurchase.selling_price;
+                            if (sortedPurchases.length > 0) {
+                                const oldestPurchase = sortedPurchases[0];  // Берем самую старую
+                                option.dataset.purchaseId = oldestPurchase.id;
+                                option.dataset.sellingPrice = oldestPurchase.selling_price;
+                            }
                         }
 
                         productSelect.appendChild(option);
@@ -1037,21 +1048,79 @@ function updateSaleProductDetails() {
 }
 
 // Update sale total
-function updateSaleTotal() {
+async function updateSaleTotal() {
     const productSelect = document.getElementById('saleProduct');
     if (!productSelect || productSelect.selectedIndex <= 0) return;
 
+    const productId = parseInt(productSelect.value);
     const quantityInput = document.getElementById('saleQuantity');
-    const priceInput = document.getElementById('salePrice');
     const totalElement = document.getElementById('saleTotal');
 
-    if (!quantityInput || !priceInput || !totalElement) return;
+    if (!quantityInput || !totalElement) return;
 
-    const quantity = parseInt(quantityInput.value) || 0;
-    const price = parseFloat(priceInput.value) || 0;
+    let requestedQuantity = parseInt(quantityInput.value) || 0;
+    if (requestedQuantity <= 0) {
+        totalElement.textContent = "0.00 ₽";
+        return;
+    }
 
-    const total = quantity * price;
-    totalElement.textContent = `${total.toFixed(2)} ₽`;
+    try {
+        // Получаем все доступные партии данного товара
+        const purchasesResponse = await fetch(`${API_BASE_URL}/get_purchase_by_product/${productId}`);
+        if (!purchasesResponse.ok) throw new Error('Не удалось загрузить партии товара');
+
+        const purchases = await purchasesResponse.json();
+
+        // Сортируем партии от старых к новым (FIFO)
+        const sortedPurchases = purchases
+            .filter(purchase => purchase.current_count > 0)
+            .sort((a, b) => new Date(a.created_on) - new Date(b.created_on));
+
+        let remainingQuantity = requestedQuantity;
+        let totalPrice = 0;
+
+        // Проходим по партиям, начиная с самой старой
+        for (const purchase of sortedPurchases) {
+            if (remainingQuantity <= 0) break;
+
+            // Количество, которое возьмем из текущей партии
+            const quantityFromPurchase = Math.min(purchase.current_count, remainingQuantity);
+
+            // Добавляем стоимость товаров из этой партии
+            totalPrice += quantityFromPurchase * purchase.selling_price;
+
+            // Уменьшаем оставшееся количество
+            remainingQuantity -= quantityFromPurchase;
+        }
+
+        // Если не смогли распределить всё количество по партиям
+        if (remainingQuantity > 0) {
+            totalElement.textContent = `Недостаточно товара (не хватает ${remainingQuantity})`;
+            return;
+        }
+
+        totalElement.textContent = `${totalPrice.toFixed(2)} ₽`;
+
+        // Сохраняем распределение по партиям в виде дополнительных данных
+        // Это поможет при сохранении транзакции, но не изменит текущую логику создания транзакций
+        const distributionData = sortedPurchases
+            .filter(purchase => {
+                const qFromPurchase = Math.min(purchase.current_count, requestedQuantity);
+                requestedQuantity -= qFromPurchase;
+                return qFromPurchase > 0;
+            })
+            .map(purchase => ({
+                id: purchase.id,
+                quantity: Math.min(purchase.current_count, requestedQuantity + Math.min(purchase.current_count, requestedQuantity)),
+                price: purchase.selling_price
+            }));
+
+        // Можно сохранить эти данные для использования при отправке формы
+        productSelect.dataset.purchaseDistribution = JSON.stringify(distributionData);
+    } catch (error) {
+        console.error('Ошибка при расчете стоимости:', error);
+        totalElement.textContent = "Ошибка расчета";
+    }
 }
 
 // Save sale
@@ -1145,6 +1214,15 @@ async function loadProductsForWriteoff() {
         productSelect.remove(1);
     }
 
+    // Очищаем список партий
+    const purchaseSelect = document.getElementById('writeoffPurchase');
+    if (purchaseSelect) {
+        while (purchaseSelect.options.length > 1) {
+            purchaseSelect.remove(1);
+        }
+        purchaseSelect.options[0].text = "Сначала выберите товар";
+    }
+
     try {
         // Fetch products
         const response = await fetch(`${API_BASE_URL}/get_product_all`);
@@ -1160,7 +1238,7 @@ async function loadProductsForWriteoff() {
             return;
         }
 
-        // Filter products with stock and add to dropdown
+        // Фильтруем товары с ненулевым остатком
         let hasProductsWithStock = false;
 
         for (const product of products) {
@@ -1169,27 +1247,22 @@ async function loadProductsForWriteoff() {
                 if (purchasesResponse.ok) {
                     const purchases = await purchasesResponse.json();
 
-                    // Calculate total available quantity
-                    const totalAvailable = purchases.reduce((sum, purchase) => sum + (purchase.current_count || 0), 0);
+                    // Проверяем, есть ли партии с ненулевым остатком
+                    const purchasesWithStock = purchases.filter(purchase =>
+                        purchase.current_count && purchase.current_count > 0);
 
-                    // Only add products with available stock
-                    if (totalAvailable > 0) {
+                    // Только добавляем товар, если есть хотя бы одна партия с остатком
+                    if (purchasesWithStock.length > 0) {
                         hasProductsWithStock = true;
 
                         const option = document.createElement('option');
                         option.value = product.id;
                         option.textContent = product.name;
+
+                        // Сохраняем общее доступное количество
+                        const totalAvailable = purchasesWithStock.reduce(
+                            (sum, purchase) => sum + purchase.current_count, 0);
                         option.dataset.availableQuantity = totalAvailable;
-
-                        // Store the latest purchase ID and price for this product
-                        if (purchases.length > 0) {
-                            const latestPurchase = purchases.reduce((latest, purchase) => {
-                                return new Date(purchase.created_on) > new Date(latest.created_on) ? purchase : latest;
-                            }, purchases[0]);
-
-                            option.dataset.purchaseId = latestPurchase.id;
-                            option.dataset.purchasePrice = latestPurchase.purchase_price;
-                        }
 
                         productSelect.appendChild(option);
                     }
@@ -1207,10 +1280,10 @@ async function loadProductsForWriteoff() {
             return;
         }
 
-        // Select first product and update details
+        // Select first product and load its purchases
         if (productSelect.options.length > 1) {
             productSelect.selectedIndex = 1;
-            updateWriteoffProductDetails();
+            loadPurchasesForWriteoff(productSelect.value);
         }
     } catch (error) {
         console.error('Ошибка при загрузке товаров для списания:', error);
@@ -1218,6 +1291,125 @@ async function loadProductsForWriteoff() {
         option.textContent = 'Ошибка загрузки товаров';
         option.disabled = true;
         productSelect.appendChild(option);
+    }
+}
+
+// Update writeoff details based on selected purchase
+function updateWriteoffDetails() {
+    const purchaseSelect = document.getElementById('writeoffPurchase');
+    if (!purchaseSelect || purchaseSelect.selectedIndex <= 0) return;
+
+    const selectedOption = purchaseSelect.options[purchaseSelect.selectedIndex];
+
+    // Update available quantity from selected purchase
+    const availableQuantity = parseInt(selectedOption.dataset.currentCount) || 0;
+    const availableQuantityElement = document.getElementById('writeoffAvailableQuantity');
+    if (availableQuantityElement) {
+        availableQuantityElement.textContent = availableQuantity;
+    }
+
+    // Update quantity input max value
+    const writeoffQuantityInput = document.getElementById('writeoffQuantity');
+    if (writeoffQuantityInput) {
+        writeoffQuantityInput.max = availableQuantity;
+
+        // Если выбранное количество больше доступного, корректируем
+        if (parseInt(writeoffQuantityInput.value) > availableQuantity) {
+            writeoffQuantityInput.value = availableQuantity;
+        }
+
+        // Минимум 1
+        if (parseInt(writeoffQuantityInput.value) < 1) {
+            writeoffQuantityInput.value = 1;
+        }
+    }
+
+    // Update total
+    updateWriteoffTotal();
+}
+
+
+// Setup event handlers
+function setupWriteoffEventHandlers() {
+    // Product selection change handler
+    const writeoffProduct = document.getElementById('writeoffProduct');
+    if (writeoffProduct) {
+        writeoffProduct.addEventListener('change', function () {
+            loadPurchasesForWriteoff(this.value);
+        });
+    }
+
+    // Purchase selection change handler
+    const writeoffPurchase = document.getElementById('writeoffPurchase');
+    if (writeoffPurchase) {
+        writeoffPurchase.addEventListener('change', updateWriteoffDetails);
+    }
+
+    // Quantity change handler
+    const writeoffQuantity = document.getElementById('writeoffQuantity');
+    if (writeoffQuantity) {
+        writeoffQuantity.addEventListener('input', updateWriteoffTotal);
+    }
+}
+
+
+// Load purchases for selected product in writeoff form
+async function loadPurchasesForWriteoff(productId) {
+    const purchaseSelect = document.getElementById('writeoffPurchase');
+    if (!purchaseSelect) return;
+
+    // Clear options
+    while (purchaseSelect.options.length > 1) {
+        purchaseSelect.remove(1);
+    }
+    purchaseSelect.options[0].text = "Выберите партию";
+
+    if (!productId) return;
+
+    try {
+        // Fetch purchases for this product
+        const response = await fetch(`${API_BASE_URL}/get_purchase_by_product/${productId}`);
+        if (!response.ok) throw new Error('Не удалось загрузить партии товара');
+
+        const purchases = await response.json();
+
+        // Фильтруем партии с ненулевым остатком
+        const purchasesWithStock = purchases.filter(purchase =>
+            purchase.current_count && purchase.current_count > 0);
+
+        if (purchasesWithStock.length === 0) {
+            const option = document.createElement('option');
+            option.textContent = 'Нет доступных партий';
+            option.disabled = true;
+            purchaseSelect.appendChild(option);
+            return;
+        }
+
+        // Добавляем партии в выпадающий список, сортируя по дате (от новых к старым для удобства)
+        purchasesWithStock
+            .sort((a, b) => new Date(b.created_on) - new Date(a.created_on))
+            .forEach(purchase => {
+                const purchaseDate = new Date(purchase.created_on).toLocaleDateString();
+
+                const option = document.createElement('option');
+                option.value = purchase.id;
+                option.textContent = `Партия от ${purchaseDate} (${purchase.current_count} шт)`;
+                option.dataset.currentCount = purchase.current_count;
+                option.dataset.purchasePrice = purchase.purchase_price;
+                purchaseSelect.appendChild(option);
+            });
+
+        // Выбираем первую партию и обновляем данные
+        if (purchaseSelect.options.length > 1) {
+            purchaseSelect.selectedIndex = 1;
+            updateWriteoffDetails();
+        }
+    } catch (error) {
+        console.error('Ошибка при загрузке партий для списания:', error);
+        const option = document.createElement('option');
+        option.textContent = 'Ошибка загрузки партий';
+        option.disabled = true;
+        purchaseSelect.appendChild(option);
     }
 }
 
@@ -1250,12 +1442,12 @@ function updateWriteoffProductDetails() {
     updateWriteoffTotal();
 }
 
-// Update writeoff total
+// Update writeoff total cost
 function updateWriteoffTotal() {
-    const productSelect = document.getElementById('writeoffProduct');
-    if (!productSelect || productSelect.selectedIndex <= 0) return;
+    const purchaseSelect = document.getElementById('writeoffPurchase');
+    if (!purchaseSelect || purchaseSelect.selectedIndex <= 0) return;
 
-    const selectedOption = productSelect.options[productSelect.selectedIndex];
+    const selectedOption = purchaseSelect.options[purchaseSelect.selectedIndex];
     const quantityInput = document.getElementById('writeoffQuantity');
     const totalElement = document.getElementById('writeoffTotal');
 
@@ -1263,6 +1455,13 @@ function updateWriteoffTotal() {
 
     const quantity = parseInt(quantityInput.value) || 0;
     const price = parseFloat(selectedOption.dataset.purchasePrice) || 0;
+    const availableQuantity = parseInt(selectedOption.dataset.currentCount) || 0;
+
+    // Проверяем, не превышает ли количество доступное
+    if (quantity > availableQuantity) {
+        totalElement.textContent = `Превышено доступное количество. Максимум: ${availableQuantity} шт.`;
+        return;
+    }
 
     const total = quantity * price;
     totalElement.textContent = `${total.toFixed(2)} ₽`;
@@ -1271,23 +1470,23 @@ function updateWriteoffTotal() {
 // Save writeoff
 async function saveWriteoff() {
     // Get form values
-    const productSelect = document.getElementById('writeoffProduct');
-    if (!productSelect || productSelect.selectedIndex <= 0) {
-        alert('Выберите товар');
+    const purchaseSelect = document.getElementById('writeoffPurchase');
+    if (!purchaseSelect || purchaseSelect.selectedIndex <= 0) {
+        alert('Выберите партию товара');
         return;
     }
 
-    const selectedOption = productSelect.options[productSelect.selectedIndex];
-    const purchaseId = parseInt(selectedOption.dataset.purchaseId);
-
+    const purchaseId = parseInt(purchaseSelect.value);
     if (isNaN(purchaseId)) {
-        alert('Не удалось определить закупку для данного товара');
+        alert('Не удалось определить партию для списания');
         return;
     }
+
+    const selectedOption = purchaseSelect.options[purchaseSelect.selectedIndex];
+    const availableQuantity = parseInt(selectedOption.dataset.currentCount) || 0;
 
     const quantityInput = document.getElementById('writeoffQuantity');
     const quantity = parseInt(quantityInput?.value) || 0;
-    const availableQuantity = parseInt(selectedOption.dataset.availableQuantity) || 0;
 
     if (quantity <= 0) {
         alert('Укажите количество больше нуля');
@@ -1295,7 +1494,7 @@ async function saveWriteoff() {
     }
 
     if (quantity > availableQuantity) {
-        alert(`Доступно только ${availableQuantity} единиц товара`);
+        alert(`Доступно только ${availableQuantity} единиц товара в выбранной партии`);
         return;
     }
 
@@ -1348,6 +1547,7 @@ async function saveWriteoff() {
         saveButton.innerHTML = originalText;
     }
 }
+
 // Helper function to filter table by search term
 function filterTableBySearchTerm(searchTerm) {
     if (!searchTerm) return;
@@ -1425,7 +1625,7 @@ function showWriteoffModal(productId) {
     const form = document.getElementById('addWriteoffForm');
     if (form) form.reset();
 
-    // Load products and set the specific product
+    // Load products for writeoff
     loadProductsForWriteoff().then(() => {
         const productSelect = document.getElementById('writeoffProduct');
         if (productSelect) {
@@ -1433,7 +1633,15 @@ function showWriteoffModal(productId) {
             for (let i = 0; i < productSelect.options.length; i++) {
                 if (parseInt(productSelect.options[i].value) === productId) {
                     productSelect.selectedIndex = i;
-                    updateWriteoffProductDetails();
+
+                    // Загружаем партии для выбранного товара
+                    loadPurchasesForWriteoff(productId).then(() => {
+                        // После загрузки партий обновляем детали списания
+                        updateWriteoffDetails();
+
+                        setupWriteoffEventHandlers();
+                    });
+
                     break;
                 }
             }
