@@ -345,3 +345,134 @@ canvas {
     opacity: 0;
     visibility: hidden;
 }
+
+/* Стили для вкладки Аналитика */
+
+/* KPI Cards */
+.kpi-card {
+    border-radius: 10px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    height: 100%;
+}
+
+.kpi-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.kpi-card .card-body {
+    padding: 15px 10px;
+}
+
+.kpi-card .card-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin: 5px 0;
+}
+
+.kpi-card .card-subtitle {
+    font-size: 0.8rem;
+    font-weight: 500;
+    text-transform: uppercase;
+}
+
+.kpi-card .trend {
+    font-size: 0.8rem;
+    margin-top: 5px;
+    color: #6c757d;
+}
+
+.kpi-card .trend.up {
+    color: #4caf50;
+}
+
+.kpi-card .trend.down {
+    color: #f44336;
+}
+
+/* Charts */
+.card {
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    border: 1px solid rgba(0,0,0,0.08);
+    margin-bottom: 20px;
+}
+
+.card-header {
+    background-color: rgba(0,0,0,0.02);
+    padding: 12px 15px;
+    border-bottom: 1px solid rgba(0,0,0,0.08);
+}
+
+.card-title {
+    font-weight: 600;
+    margin-bottom: 0;
+    color: #333;
+}
+
+.card-body {
+    padding: 15px;
+}
+
+canvas {
+    max-width: 100%;
+}
+
+/* ABC Analysis */
+.badge {
+    padding: 6px 10px;
+    font-weight: 500;
+    border-radius: 4px;
+}
+
+.table th {
+    font-weight: 600;
+    background-color: #f8f9fa;
+}
+
+/* Responsive adjustments */
+@media (max-width: 767px) {
+    .kpi-card .card-title {
+        font-size: 1.2rem;
+    }
+
+    .kpi-card .card-body {
+        padding: 10px 5px;
+    }
+
+    .row {
+        margin-bottom: 10px !important;
+    }
+
+    .kpi-card {
+        margin-bottom: 15px;
+    }
+}
+
+/* Top products card */
+#topProductsChart {
+    height: 300px !important;
+}
+
+/* Button groups */
+.btn-group-sm > .btn {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+}
+
+/* Alert in forecast footer */
+.card-footer .alert {
+    padding: 0.5rem 1rem;
+}
+
+.card-footer .alert i {
+    font-size: 1.2rem;
+}
+
+/* Period selector buttons */
+.btn-group .btn-outline-primary.active {
+    background-color: #0d6efd;
+    color: white;
+}
+

@@ -15,16 +15,6 @@ let activeTab = 'products';
 document.addEventListener('DOMContentLoaded', function () {
     console.log('DOM loaded, initializing app...');
 
-    if (!window.Chart) {
-        // Если Chart.js не загружен, добавляем его динамически
-        const script = document.createElement('script');
-        script.src = 'https://cdn.jsdelivr.net/npm/chart.js';
-        script.onload = function () {
-            console.log('Chart.js загружен успешно');
-        };
-        document.head.appendChild(script);
-    }
-
     // Initialize navigation
     setupNavigation();
 
@@ -42,7 +32,137 @@ document.addEventListener('DOMContentLoaded', function () {
     // Setup buttons and form handlers
     setupButtons();
 
+        // Обработчик для кнопки применения фильтра дат
+    const analyticsApplyButton = document.getElementById('analyticsApplyDateRange');
+    if (analyticsApplyButton) {
+        analyticsApplyButton.addEventListener('click', loadAnalyticsData);
+    }
 
+    // Обработчики для кнопок периода для графика доходов/расходов
+    const revexpPeriodButtons = document.querySelectorAll('.btn-group[role="group"] button[data-target="revexp"]');
+    revexpPeriodButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            revexpPeriod = this.getAttribute('data-period');
+
+            // Обновление активной кнопки
+            revexpPeriodButtons.forEach(btn => btn.classList.remove('active'));
+            this.classList.add('active');
+
+            // Обновление графика
+            const revenueData = document.querySelector('#revenue');
+            const expensesData = document.querySelector('#expenses');
+            if (revenueData && expensesData) {
+                createRevenueExpensesChart(revenueData, expensesData, revexpPeriod);
+            }
+        });
+    });
+
+    // Обработчики для кнопок периода для графика чистой прибыли
+    const profitPeriodButtons = document.querySelectorAll('.btn-group[role="group"] button[data-target="profit"]');
+    profitPeriodButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            profitPeriod = this.getAttribute('data-period');
+
+            // Обновление активной кнопки
+            profitPeriodButtons.forEach(btn => btn.classList.remove('active'));
+            this.classList.add('active');
+
+            // Обновление графика
+            const profitData = document.querySelector('#profitByDay');
+            if (profitData) {
+                createNetProfitChart(profitData, profitPeriod);
+            }
+        });
+    });
+
+    // Обработчики для кнопок сортировки топ товаров
+    const topProductsSortButtons = document.querySelectorAll('.btn-group[role="group"] button[data-sort]');
+    topProductsSortButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            topProductsSort = this.getAttribute('data-sort');
+
+            // Обновление активной кнопки
+            topProductsSortButtons.forEach(btn => btn.classList.remove('active'));
+            this.classList.add('active');
+
+            // Обновление графика
+            const topProductsData = document.querySelector('#topProducts');
+            if (topProductsData) {
+                createTopProductsChart(topProductsData, topProductsSort);
+            }
+        });
+    });
+
+    // Обработчики для кнопок периода прогноза
+    const forecastButtons = document.querySelectorAll('.btn-group[role="group"] button[data-forecast]');
+    forecastButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            forecastDays = parseInt(this.getAttribute('data-forecast'));
+
+            // Обновление активной кнопки
+            forecastButtons.forEach(btn => btn.classList.remove('active'));
+            this.classList.add('active');
+
+            // Обновление графика
+            const forecastData = document.querySelector('#forecastData');
+            if (forecastData) {
+                createForecastChart(forecastData, forecastDays);
+            }
+        });
+    });
+
+    // Интеграция с существующей навигацией
+    const existingSetupNavigation = window.setupNavigation;
+
+    window.setupNavigation = function() {
+        if (typeof existingSetupNavigation === 'function') {
+            existingSetupNavigation();
+        }
+
+        // Получаем все навигационные ссылки
+        const navLinks = document.querySelectorAll('.sidebar .nav-link');
+
+        // Добавляем обработчик для вкладки аналитики
+        navLinks.forEach(link => {
+            link.addEventListener('click', function() {
+                const tabId = this.getAttribute('data-tab');
+
+                if (tabId === 'analytics') {
+                    // Скрываем поиск на вкладке аналитики
+                    const searchBar = document.querySelector('.search-bar');
+                    if (searchBar) {
+                        searchBar.style.display = 'none';
+                    }
+
+                    // Загружаем данные аналитики
+                    loadAnalyticsData();
+                    ensureCanvasElements();
+                }
+            });
+        });
+    };
+
+    // Вызываем обновленную функцию setupNavigation, если страница уже загружена
+    if (document.readyState === 'complete' || document.readyState === 'interactive') {
+        window.setupNavigation();
+    }
+
+    // Проверяем, нужно ли подключать Chart.js
+    if (!window.Chart) {
+        // Если Chart.js не загружен, добавляем его динамически
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/chart.js';
+        script.onload = function() {
+            console.log('Chart.js загружен успешно');
+
+            // Если текущая вкладка - аналитика, загружаем данные
+            const analyticsTab = document.getElementById('analytics');
+            if (analyticsTab && analyticsTab.classList.contains('active')) {
+                loadAnalyticsData();
+            }
+        };
+        document.head.appendChild(script);
+    }
 });
 
 // Setup navigation
@@ -129,6 +249,9 @@ function loadTabData(tabId) {
             break;
         case 'writeoffs':
             loadWriteoffsData();
+            break;
+        case 'analytics':
+            loadAnalyticsData();
             break;
     }
 }
@@ -2239,6 +2362,1287 @@ function toggleSearchVisibility(tabId) {
     }
 }
 
-// Модифицируем существующую функцию setupNavigation
-// или добавим код в обработчик переключения вкладок
+
+// Глобальные переменные для графиков
+let revenueExpensesChart = null;
+let profitStructureChart = null;
+let netProfitChart = null;
+let categorySalesChart = null;
+let topProductsChart = null;
+let abcPieChart = null;
+let forecastChart = null;
+
+// Глобальные переменные для настроек
+let revexpPeriod = 'day';
+let profitPeriod = 'day';
+let topProductsSort = 'profit';
+let forecastDays = 30;
+
+// Загрузка данных аналитики при выборе вкладки
+function loadAnalyticsData() {
+    // Установка дат по умолчанию, если они не были установлены
+    if (!document.getElementById('analyticsStartDate').value) {
+        // Установка начальной даты (30 дней назад)
+        const startDate = new Date();
+        startDate.setDate(startDate.getDate() - 30);
+        document.getElementById('analyticsStartDate').value = formatDate(startDate);
+    }
+
+    if (!document.getElementById('analyticsEndDate').value) {
+        // Установка конечной даты (сегодня)
+        document.getElementById('analyticsEndDate').value = formatDate(new Date());
+    }
+
+    // Получение выбранного периода дат
+    const startDate = document.getElementById('analyticsStartDate').value;
+    const endDate = document.getElementById('analyticsEndDate').value;
+
+    // НЕ показываем спиннеры загрузки - УДАЛЕНО: showLoadingSpinners();
+
+    // Асинхронная загрузка данных
+    fetchAnalyticsData(startDate, endDate)
+        .then(data => {
+            // Отображаем данные на графиках и в KPI
+            displayAnalyticsData(data);
+        })
+        .catch(error => {
+            console.error('Ошибка при загрузке аналитических данных:', error);
+        });
+}
+
+
+// Показать ошибку загрузки
+function showLoadingError() {
+    const chartContainers = [
+        'revenueExpensesChart',
+        'profitStructureChart',
+        'netProfitChart',
+        'categorySalesChart',
+        'topProductsChart',
+        'abcPieChart',
+        'forecastChart'
+    ];
+
+    chartContainers.forEach(id => {
+        const container = document.getElementById(id).parentNode;
+        container.innerHTML = `
+            <div class="alert alert-danger">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                Ошибка при загрузке данных. Пожалуйста, попробуйте позже.
+            </div>
+        `;
+    });
+}
+
+// Функция получения аналитических данных
+async function fetchAnalyticsData(startDate, endDate) {
+    try {
+        // Здесь будет запрос к вашему API для получения аналитических данных
+        // Для демонстрации возвращаем сгенерированные данные
+
+        // Получаем транзакции продаж (доходы)
+        const salesResponse = await fetch(`${API_BASE_URL}/get_transactions_by_type/1`);
+        let salesTransactions = [];
+        if (salesResponse.ok) {
+            salesTransactions = await salesResponse.json();
+        }
+
+        // Получаем транзакции закупок (расходы)
+        const purchasesResponse = await fetch(`${API_BASE_URL}/get_transactions_by_type/2`);
+        let purchaseTransactions = [];
+        if (purchasesResponse.ok) {
+            purchaseTransactions = await purchasesResponse.json();
+        }
+
+        // Получаем транзакции списаний
+        const writeoffsResponse = await fetch(`${API_BASE_URL}/get_transactions_by_type/3`);
+        let writeoffTransactions = [];
+        if (writeoffsResponse.ok) {
+            writeoffTransactions = await writeoffsResponse.json();
+        }
+
+        // Получение всех товаров
+        const productsResponse = await fetch(`${API_BASE_URL}/get_product_all`);
+        let products = [];
+        if (productsResponse.ok) {
+            products = await productsResponse.json();
+        }
+
+        // Получение всех категорий
+        const categoriesResponse = await fetch(`${API_BASE_URL}/get_categories`);
+        let categories = [];
+        if (categoriesResponse.ok) {
+            categories = await categoriesResponse.json();
+        }
+
+        // Функция для получения детальной информации о закупке
+        const getPurchaseDetails = async (purchaseId) => {
+            try {
+                const response = await fetch(`${API_BASE_URL}/get_purchase_by_id/${purchaseId}`);
+                if (response.ok) {
+                    return await response.json();
+                }
+            } catch (e) {
+                console.warn(`Не удалось получить детали закупки ${purchaseId}`);
+            }
+            return null;
+        };
+
+        // Фильтрация по датам
+        const filterByDateRange = (transactions) => {
+            return transactions.filter(transaction => {
+                const transactionDate = new Date(transaction.created_on);
+                return transactionDate >= new Date(startDate) &&
+                       transactionDate <= new Date(endDate + 'T23:59:59');
+            });
+        };
+
+        // Фильтруем транзакции по выбранному диапазону дат
+        const filteredSales = filterByDateRange(salesTransactions);
+        const filteredPurchases = filterByDateRange(purchaseTransactions);
+        const filteredWriteoffs = filterByDateRange(writeoffTransactions);
+
+        // Обогащаем данные о транзакциях информацией о товарах и закупках
+        const enrichedSales = [];
+        for (const sale of filteredSales) {
+            const purchase = await getPurchaseDetails(sale.id_purchase);
+            if (purchase) {
+                const product = products.find(p => p.id === purchase.id_product);
+                const category = product ? categories.find(c => c.id === product.id_category) : null;
+
+                enrichedSales.push({
+                    ...sale,
+                    purchase,
+                    product,
+                    category,
+                    revenue: purchase.selling_price * sale.amount,
+                    cost: purchase.purchase_price * sale.amount,
+                    profit: (purchase.selling_price - purchase.purchase_price) * sale.amount,
+                    margin: ((purchase.selling_price - purchase.purchase_price) / purchase.selling_price * 100).toFixed(2)
+                });
+            }
+        }
+
+        // Расчет KPI
+        const totalRevenue = enrichedSales.reduce((sum, sale) => sum + sale.revenue, 0);
+        const totalCost = enrichedSales.reduce((sum, sale) => sum + sale.cost, 0);
+        const totalProfit = enrichedSales.reduce((sum, sale) => sum + sale.profit, 0);
+        const averageMargin = enrichedSales.length > 0 ?
+            enrichedSales.reduce((sum, sale) => sum + parseFloat(sale.margin), 0) / enrichedSales.length : 0;
+
+        // Формирование данных по доходам/расходам по дням
+        const revenueByDay = {};
+        const expensesByDay = {};
+        const profitByDay = {};
+
+        // Группировка данных о продажах по дням
+        enrichedSales.forEach(sale => {
+            const date = sale.created_on.split('T')[0];
+
+            if (!revenueByDay[date]) revenueByDay[date] = 0;
+            if (!profitByDay[date]) profitByDay[date] = 0;
+
+            revenueByDay[date] += sale.revenue;
+            profitByDay[date] += sale.profit;
+        });
+
+        // Группировка данных о закупках по дням
+        for (const purchase of filteredPurchases) {
+            const date = purchase.created_on.split('T')[0];
+
+            if (!expensesByDay[date]) expensesByDay[date] = 0;
+
+            const purchaseDetails = await getPurchaseDetails(purchase.id_purchase);
+            if (purchaseDetails) {
+                expensesByDay[date] += purchaseDetails.purchase_price * purchase.amount;
+            }
+        }
+
+        // Данные по продажам в разрезе категорий
+        const salesByCategory = {};
+        enrichedSales.forEach(sale => {
+            const categoryName = sale.category ? sale.category.name : 'Без категории';
+
+            if (!salesByCategory[categoryName]) {
+                salesByCategory[categoryName] = {
+                    revenue: 0,
+                    profit: 0,
+                    count: 0
+                };
+            }
+
+            salesByCategory[categoryName].revenue += sale.revenue;
+            salesByCategory[categoryName].profit += sale.profit;
+            salesByCategory[categoryName].count += sale.amount;
+        });
+
+        // Данные о продуктах для ABC-анализа и топ товаров
+        const productSales = {};
+        enrichedSales.forEach(sale => {
+            const productId = sale.product ? sale.product.id : null;
+            if (!productId) return;
+
+            if (!productSales[productId]) {
+                productSales[productId] = {
+                    id: productId,
+                    name: sale.product.name,
+                    revenue: 0,
+                    profit: 0,
+                    quantity: 0,
+                    margin: 0
+                };
+            }
+
+            productSales[productId].revenue += sale.revenue;
+            productSales[productId].profit += sale.profit;
+            productSales[productId].quantity += sale.amount;
+        });
+
+        // Рассчитываем маржу для каждого продукта
+        Object.values(productSales).forEach(product => {
+            product.margin = product.revenue > 0 ? (product.profit / product.revenue * 100) : 0;
+        });
+
+        // ABC-анализ
+        const abcAnalysis = calculateABCAnalysis(Object.values(productSales));
+
+        // Сортированный массив товаров для топ-10
+        const topProductsByProfit = Object.values(productSales)
+            .sort((a, b) => b.profit - a.profit)
+            .slice(0, 10);
+
+        const topProductsBySales = Object.values(productSales)
+            .sort((a, b) => b.revenue - a.revenue)
+            .slice(0, 10);
+
+        const topProductsByMargin = Object.values(productSales)
+            .sort((a, b) => b.margin - a.margin)
+            .filter(p => p.quantity > 0) // Отфильтровываем товары без продаж
+            .slice(0, 10);
+
+        // Данные для прогноза
+        const forecastData = generateForecastData(revenueByDay, 90); // Прогноз на 90 дней
+
+        // Активные товары (с продажами в выбранном периоде)
+        const activeProductsCount = Object.keys(productSales).length;
+
+        // Средний чек
+        const transactionCount = enrichedSales.length;
+        const averageCheck = transactionCount > 0 ? totalRevenue / transactionCount : 0;
+
+        // Оборачиваемость запасов (упрощенно)
+        const stockTurnover = totalCost > 0 ? totalRevenue / totalCost : 0;
+
+        // Формируем итоговый объект аналитических данных
+        return {
+            kpi: {
+                totalRevenue,
+                totalCost,
+                totalProfit,
+                averageMargin,
+                activeProductsCount,
+                averageCheck,
+                stockTurnover,
+                transactionCount
+            },
+            revenueByDay,
+            expensesByDay,
+            profitByDay,
+            salesByCategory,
+            productSales,
+            abcAnalysis,
+            topProducts: {
+                byProfit: topProductsByProfit,
+                bySales: topProductsBySales,
+                byMargin: topProductsByMargin
+            },
+            forecastData
+        };
+    } catch (error) {
+        console.error('Ошибка при получении аналитических данных:', error);
+        throw error;
+    }
+}
+
+function displayAnalyticsData(data) {
+    if (!data) {
+        console.error('Получены пустые аналитические данные');
+        return;
+    }
+
+    // Обновляем KPI карточки
+    if (data.kpi) {
+        updateKPICards(data.kpi);
+    }
+
+    // Создаем графики, не изменяя структуру DOM
+    try {
+        if (data.revenueByDay && data.expensesByDay) {
+            createRevenueExpensesChart(data.revenueByDay, data.expensesByDay, revexpPeriod);
+        }
+
+        if (data.kpi) {
+            createProfitStructureChart(data.kpi);
+        }
+
+        if (data.profitByDay) {
+            createNetProfitChart(data.profitByDay, profitPeriod);
+        }
+
+        if (data.salesByCategory) {
+            createCategorySalesChart(data.salesByCategory);
+        }
+
+        if (data.topProducts) {
+            createTopProductsChart(data.topProducts, topProductsSort);
+        }
+
+        if (data.abcAnalysis) {
+            createABCPieChart(data.abcAnalysis);
+            updateABCAnalysisTable(data.abcAnalysis);
+        }
+
+        if (data.forecastData) {
+            createForecastChart(data.forecastData, forecastDays);
+        }
+
+        // Генерируем рекомендации
+        if (data.forecastData) {
+            generateRecommendations(data);
+        }
+    } catch (error) {
+        console.error('Ошибка при отображении данных:', error);
+    }
+}
+// Обновление KPI карточек
+function updateKPICards(kpi) {
+    // Форматирование валюты
+    const formatCurrency = (value) => {
+        return '₽' + value.toLocaleString('ru-RU', {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0
+        });
+    };
+
+    // Форматирование процентов
+    const formatPercent = (value) => {
+        return parseFloat(value).toFixed(1) + '%';
+    };
+
+    // Валовая прибыль
+    document.getElementById('grossProfit').textContent = formatCurrency(kpi.totalProfit);
+
+    // Маржинальность
+    document.getElementById('marginPercent').textContent = formatPercent(kpi.averageMargin);
+
+    // Оборачиваемость запасов
+    document.getElementById('stockTurnover').textContent = kpi.stockTurnover.toFixed(2) + 'x';
+
+    // Активные товары
+    document.getElementById('activeProducts').textContent = kpi.activeProductsCount;
+
+    // Средний чек
+    document.getElementById('averageCheck').textContent = formatCurrency(kpi.averageCheck);
+
+    // Рентабельность продаж
+    const profitability = kpi.totalRevenue > 0 ? (kpi.totalProfit / kpi.totalRevenue * 100) : 0;
+    document.getElementById('profitability').textContent = formatPercent(profitability);
+
+    // TODO: Добавить тренды (для этого нужны данные предыдущего периода)
+    // Пока устанавливаем нейтральные значения
+    document.querySelectorAll('.trend').forEach(trend => {
+        trend.innerHTML = '<i class="bi bi-arrow-right"></i> <span>0%</span>';
+        trend.classList.remove('up', 'down');
+    });
+}
+
+function createRevenueExpensesChart(revenueData, expensesData, period) {
+    if (!revenueData || !expensesData) {
+        console.error('Отсутствуют данные для графика доходов и расходов');
+        return;
+    }
+
+    // Получаем существующий canvas, не изменяя DOM
+    const canvas = document.getElementById('revenueExpensesChart');
+    if (!canvas) {
+        console.error('Элемент revenueExpensesChart не найден в DOM');
+        return;
+    }
+
+    // Подготовка данных с агрегацией по периоду
+    const aggregatedData = aggregateFinancialData(revenueData, expensesData, period);
+
+    // Получаем контекст рисования
+    const ctx = canvas.getContext('2d');
+
+    // Уничтожаем старый график, если он существует
+    if (revenueExpensesChart) {
+        revenueExpensesChart.destroy();
+    }
+
+    // Создаем новый график
+    revenueExpensesChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: aggregatedData.labels,
+            datasets: [
+                {
+                    label: 'Доходы',
+                    data: aggregatedData.revenueValues,
+                    backgroundColor: 'rgba(76, 175, 80, 0.7)',
+                    borderColor: 'rgba(76, 175, 80, 1)',
+                    borderWidth: 1
+                },
+                {
+                    label: 'Расходы',
+                    data: aggregatedData.expensesValues,
+                    backgroundColor: 'rgba(244, 67, 54, 0.7)',
+                    borderColor: 'rgba(244, 67, 54, 1)',
+                    borderWidth: 1
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return '₽' + value.toLocaleString();
+                        }
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    position: 'top',
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return context.dataset.label + ': ₽' + context.raw.toLocaleString();
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+// Структура прибыли (круговая диаграмма)
+function createProfitStructureChart(kpi) {
+    // Создаем новый canvas
+    const chartContainer = document.getElementById('profitStructureChart').parentNode;
+    chartContainer.innerHTML = '<canvas id="profitStructureChart"></canvas>';
+    const ctx = document.getElementById('profitStructureChart').getContext('2d');
+
+    // Уничтожаем старый график, если он существует
+    if (profitStructureChart) {
+        profitStructureChart.destroy();
+    }
+
+    // Расчет данных для диаграммы
+    const totalRevenue = kpi.totalRevenue;
+    const totalCost = kpi.totalCost;
+    const grossProfit = kpi.totalProfit;
+
+    // Создаем новый график
+    profitStructureChart = new Chart(ctx, {
+        type: 'pie',
+        data: {
+            labels: ['Себестоимость', 'Прибыль'],
+            datasets: [{
+                data: [totalCost, grossProfit],
+                backgroundColor: [
+                    'rgba(244, 67, 54, 0.7)',
+                    'rgba(76, 175, 80, 0.7)'
+                ],
+                borderColor: [
+                    'rgba(244, 67, 54, 1)',
+                    'rgba(76, 175, 80, 1)'
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const value = context.raw;
+                            const percent = ((value / totalRevenue) * 100).toFixed(1);
+                            return context.label + ': ₽' + value.toLocaleString() + ' (' + percent + '%)';
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+// График чистой прибыли
+function createNetProfitChart(profitData, period) {
+    // Подготовка данных с агрегацией по периоду
+    const aggregatedData = aggregateChartData(profitData, period);
+
+    // Создаем новый canvas
+    const chartContainer = document.getElementById('netProfitChart').parentNode;
+    chartContainer.innerHTML = '<canvas id="netProfitChart"></canvas>';
+    const ctx = document.getElementById('netProfitChart').getContext('2d');
+
+    // Уничтожаем старый график, если он существует
+    if (netProfitChart) {
+        netProfitChart.destroy();
+    }
+
+    // Вычисляем скользящее среднее для тренда
+    const movingAverage = calculateMovingAverage(aggregatedData.values, 3);
+
+    // Создаем новый график
+    netProfitChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: aggregatedData.labels,
+            datasets: [
+                {
+                    label: 'Чистая прибыль',
+                    data: aggregatedData.values,
+                    backgroundColor: 'rgba(33, 150, 243, 0.2)',
+                    borderColor: 'rgba(33, 150, 243, 1)',
+                    borderWidth: 2,
+                    pointRadius: 3,
+                    pointBackgroundColor: 'rgba(33, 150, 243, 1)',
+                    tension: 0.3,
+                    fill: true
+                },
+                {
+                    label: 'Тренд (скользящее среднее)',
+                    data: movingAverage,
+                    borderColor: 'rgba(103, 58, 183, 1)',
+                    borderWidth: 2,
+                    pointRadius: 0,
+                    tension: 0.4,
+                    fill: false,
+                    borderDash: [5, 5]
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return '₽' + value.toLocaleString();
+                        }
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    position: 'top',
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return context.dataset.label + ': ₽' + context.raw.toLocaleString();
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+// График продаж по категориям
+function createCategorySalesChart(salesByCategory) {
+    // Подготовка данных
+    const categories = Object.keys(salesByCategory);
+    const revenue = categories.map(category => salesByCategory[category].revenue);
+    const profit = categories.map(category => salesByCategory[category].profit);
+
+    // Создаем новый canvas
+    const chartContainer = document.getElementById('categorySalesChart').parentNode;
+    chartContainer.innerHTML = '<canvas id="categorySalesChart"></canvas>';
+    const ctx = document.getElementById('categorySalesChart').getContext('2d');
+
+    // Уничтожаем старый график, если он существует
+    if (categorySalesChart) {
+        categorySalesChart.destroy();
+    }
+
+    // Создаем новый график
+    categorySalesChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: categories,
+            datasets: [
+                {
+                    label: 'Выручка',
+                    data: revenue,
+                    backgroundColor: 'rgba(33, 150, 243, 0.7)',
+                    borderColor: 'rgba(33, 150, 243, 1)',
+                    borderWidth: 1
+                },
+                {
+                    label: 'Прибыль',
+                    data: profit,
+                    backgroundColor: 'rgba(76, 175, 80, 0.7)',
+                    borderColor: 'rgba(76, 175, 80, 1)',
+                    borderWidth: 1
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return '₽' + value.toLocaleString();
+                        }
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    position: 'top',
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return context.dataset.label + ': ₽' + context.raw.toLocaleString();
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+// Исправленная функция создания графика топ товаров
+function createTopProductsChart(topProducts, sortType) {
+    // Выбор данных в зависимости от типа сортировки
+    let data;
+    let labelSuffix;
+
+    switch (sortType) {
+        case 'profit':
+            data = topProducts.byProfit;
+            labelSuffix = ' (прибыль)';
+            break;
+        case 'sales':
+            data = topProducts.bySales;
+            labelSuffix = ' (выручка)';
+            break;
+        case 'margin':
+            data = topProducts.byMargin;
+            labelSuffix = ' (маржа)';
+            break;
+        default:
+            data = topProducts.byProfit;
+            labelSuffix = ' (прибыль)';
+    }
+
+    // Подготовка данных для графика
+    const labels = data.map(product => product.name);
+    let values;
+
+    if (sortType === 'margin') {
+        values = data.map(product => parseFloat(product.margin));
+    } else {
+        values = data.map(product => sortType === 'profit' ? product.profit : product.revenue);
+    }
+
+    try {
+        // Получаем canvas элемент
+        const canvas = document.getElementById('topProductsChart');
+        if (!canvas) {
+            console.error('Canvas элемент для топ товаров не найден');
+            return;
+        }
+
+        // Получаем контекст для рисования
+        const ctx = canvas.getContext('2d');
+
+        // Уничтожаем предыдущий график, если он существует
+        // Добавляем проверку существования объекта перед вызовом destroy()
+        if (window.topProductsChart && typeof window.topProductsChart.destroy === 'function') {
+            window.topProductsChart.destroy();
+        }
+
+        // Цвета в зависимости от типа сортировки
+        const backgroundColor = sortType === 'profit' ?
+            'rgba(76, 175, 80, 0.7)' :
+            (sortType === 'sales' ? 'rgba(33, 150, 243, 0.7)' : 'rgba(255, 193, 7, 0.7)');
+
+        const borderColor = sortType === 'profit' ?
+            'rgba(76, 175, 80, 1)' :
+            (sortType === 'sales' ? 'rgba(33, 150, 243, 1)' : 'rgba(255, 193, 7, 1)');
+
+        // Создаем новый график - ВАЖНО: используем type: 'bar', а не 'horizontalBar'
+        window.topProductsChart = new Chart(ctx, {
+            type: 'bar', // Используем обычный bar с горизонтальной ориентацией
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Топ товаров' + labelSuffix,
+                    data: values,
+                    backgroundColor: backgroundColor,
+                    borderColor: borderColor,
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                indexAxis: 'y', // Это создает горизонтальный bar chart в Chart.js 3.x
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                if (sortType === 'margin') {
+                                    return value.toFixed(1) + '%';
+                                } else {
+                                    return '₽' + value.toLocaleString();
+                                }
+                            }
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false,
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                if (sortType === 'margin') {
+                                    return context.dataset.label + ': ' + context.raw.toFixed(1) + '%';
+                                } else {
+                                    return context.dataset.label + ': ₽' + context.raw.toLocaleString();
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        console.log("График топ товаров успешно создан");
+    } catch (error) {
+        console.error("Ошибка при создании графика топ товаров:", error);
+    }
+}
+
+// ABC-анализ (круговая диаграмма)
+function createABCPieChart(abcAnalysis) {
+    // Создаем новый canvas
+    const chartContainer = document.getElementById('abcPieChart').parentNode;
+    chartContainer.innerHTML = '<canvas id="abcPieChart"></canvas>';
+    const ctx = document.getElementById('abcPieChart').getContext('2d');
+
+    // Уничтожаем старый график, если он существует
+    if (abcPieChart) {
+        abcPieChart.destroy();
+    }
+
+    // Создаем новый график
+    abcPieChart = new Chart(ctx, {
+        type: 'pie',
+        data: {
+            labels: ['Группа A', 'Группа B', 'Группа C'],
+            datasets: [{
+                data: [
+                    abcAnalysis.A.profitPercent,
+                    abcAnalysis.B.profitPercent,
+                    abcAnalysis.C.profitPercent
+                ],
+                backgroundColor: [
+                    'rgba(76, 175, 80, 0.7)',
+                    'rgba(255, 193, 7, 0.7)',
+                    'rgba(158, 158, 158, 0.7)'
+                ],
+                borderColor: [
+                    'rgba(76, 175, 80, 1)',
+                    'rgba(255, 193, 7, 1)',
+                    'rgba(158, 158, 158, 1)'
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'right',
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const value = context.raw;
+                            return context.label + ': ' + value.toFixed(1) + '% прибыли';
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+// Прогноз продаж
+function createForecastChart(forecastData, days) {
+    // Фильтруем данные по выбранному количеству дней
+    const filteredData = {
+        labels: forecastData.labels.slice(0, days),
+        actualValues: forecastData.actualValues.slice(0, days),
+        forecastValues: forecastData.forecastValues.slice(0, days),
+        confidenceLower: forecastData.confidenceLower.slice(0, days),
+        confidenceUpper: forecastData.confidenceUpper.slice(0, days)
+    };
+
+    // Создаем новый canvas
+    const chartContainer = document.getElementById('forecastChart').parentNode;
+    chartContainer.innerHTML = '<canvas id="forecastChart"></canvas>';
+    const ctx = document.getElementById('forecastChart').getContext('2d');
+
+    // Уничтожаем старый график, если он существует
+    if (forecastChart) {
+        forecastChart.destroy();
+    }
+
+    // Создаем новый график
+    forecastChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: filteredData.labels,
+            datasets: [
+                {
+                    label: 'Фактические продажи',
+                    data: filteredData.actualValues,
+                    backgroundColor: 'rgba(33, 150, 243, 0.2)',
+                    borderColor: 'rgba(33, 150, 243, 1)',
+                    borderWidth: 2,
+                    pointRadius: 3,
+                    pointBackgroundColor: 'rgba(33, 150, 243, 1)',
+                    tension: 0.3,
+                    fill: false
+                },
+                {
+                    label: 'Прогноз',
+                    data: filteredData.forecastValues,
+                    backgroundColor: 'rgba(156, 39, 176, 0.2)',
+                    borderColor: 'rgba(156, 39, 176, 1)',
+                    borderWidth: 2,
+                    pointRadius: 2,
+                    pointBackgroundColor: 'rgba(156, 39, 176, 1)',
+                    tension: 0.3,
+                    fill: false
+                },
+                {
+                    label: 'Нижняя граница',
+                    data: filteredData.confidenceLower,
+                    backgroundColor: 'rgba(156, 39, 176, 0.1)',
+                    borderColor: 'rgba(156, 39, 176, 0.5)',
+                    borderWidth: 1,
+                    pointRadius: 0,
+                    tension: 0.3,
+                    fill: '+1'
+                },
+                {
+                    label: 'Верхняя граница',
+                    data: filteredData.confidenceUpper,
+                    backgroundColor: 'rgba(156, 39, 176, 0.1)',
+                    borderColor: 'rgba(156, 39, 176, 0.5)',
+                    borderWidth: 1,
+                    pointRadius: 0,
+                    tension: 0.3,
+                    fill: false
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return '₽' + value.toLocaleString();
+                        }
+                    }
+                },
+                x: {
+                    ticks: {
+                        maxRotation: 45,
+                        minRotation: 45
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    position: 'top',
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return context.dataset.label + ': ₽' + context.raw.toLocaleString();
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+// Обновление таблицы ABC-анализа
+function updateABCAnalysisTable(abcAnalysis) {
+    document.getElementById('groupACount').textContent = abcAnalysis.A.count;
+    document.getElementById('groupBCount').textContent = abcAnalysis.B.count;
+    document.getElementById('groupCCount').textContent = abcAnalysis.C.count;
+
+    document.getElementById('groupAPercent').textContent = abcAnalysis.A.profitPercent.toFixed(1) + '%';
+    document.getElementById('groupBPercent').textContent = abcAnalysis.B.profitPercent.toFixed(1) + '%';
+    document.getElementById('groupCPercent').textContent = abcAnalysis.C.profitPercent.toFixed(1) + '%';
+}
+
+// Генерация рекомендаций
+function generateRecommendations(data) {
+    const recommendationElement = document.getElementById('forecastRecommendation');
+
+    // Анализ тренда продаж
+    const lastValues = data.forecastData.forecastValues.slice(0, 30);
+    const firstHalf = lastValues.slice(0, 15);
+    const secondHalf = lastValues.slice(15);
+
+    const firstHalfAvg = firstHalf.reduce((sum, val) => sum + val, 0) / firstHalf.length;
+    const secondHalfAvg = secondHalf.reduce((sum, val) => sum + val, 0) / secondHalf.length;
+
+    const growthRate = ((secondHalfAvg - firstHalfAvg) / firstHalfAvg) * 100;
+
+    let recommendation = '';
+
+    if (growthRate > 10) {
+        recommendation = 'Ожидается значительный рост продаж. Рекомендуется увеличить запасы наиболее популярных товаров из категории А и инвестировать в маркетинг для поддержания тренда.';
+    } else if (growthRate > 3) {
+        recommendation = 'Ожидается умеренный рост продаж. Рекомендуется поддерживать оптимальный уровень запасов и сосредоточиться на товарах с высокой маржинальностью.';
+    } else if (growthRate >= -3) {
+        recommendation = 'Прогнозируются стабильные продажи. Рекомендуется оптимизировать ассортимент, сократив долю товаров категории C и увеличив предложение товаров категории A и B.';
+    } else if (growthRate >= -10) {
+        recommendation = 'Ожидается небольшое снижение продаж. Рекомендуется сократить закупки и провести акции для стимулирования спроса.';
+    } else {
+        recommendation = 'Прогнозируется значительное снижение продаж. Рекомендуется минимизировать закупки, пересмотреть ценовую политику и провести анализ конкурентов.';
+    }
+
+    recommendationElement.textContent = recommendation;
+}
+
+// Вспомогательные функции
+
+// ABC-анализ товаров (принцип Парето 20/80)
+function calculateABCAnalysis(products) {
+    // Сортируем товары по прибыли (от большей к меньшей)
+    const sortedProducts = [...products].sort((a, b) => b.profit - a.profit);
+
+    // Рассчитываем общую прибыль
+    const totalProfit = sortedProducts.reduce((sum, product) => sum + product.profit, 0);
+
+    // Инициализируем группы
+    const groups = {
+        A: { products: [], profit: 0, count: 0, profitPercent: 0 },
+        B: { products: [], profit: 0, count: 0, profitPercent: 0 },
+        C: { products: [], profit: 0, count: 0, profitPercent: 0 }
+    };
+
+    // Распределяем товары по группам
+    let cumulativePercent = 0;
+
+    for (const product of sortedProducts) {
+        const profitPercent = (product.profit / totalProfit) * 100;
+        cumulativePercent += profitPercent;
+
+        if (cumulativePercent <= 70) {
+            // Группа A: топ товары, приносящие 70% прибыли
+            groups.A.products.push(product);
+            groups.A.profit += product.profit;
+        } else if (cumulativePercent <= 90) {
+            // Группа B: товары, приносящие следующие 20% прибыли
+            groups.B.products.push(product);
+            groups.B.profit += product.profit;
+        } else {
+            // Группа C: товары, приносящие последние 10% прибыли
+            groups.C.products.push(product);
+            groups.C.profit += product.profit;
+        }
+    }
+
+    // Вычисляем проценты и количество товаров в каждой группе
+    groups.A.count = groups.A.products.length;
+    groups.B.count = groups.B.products.length;
+    groups.C.count = groups.C.products.length;
+
+    groups.A.profitPercent = (groups.A.profit / totalProfit) * 100;
+    groups.B.profitPercent = (groups.B.profit / totalProfit) * 100;
+    groups.C.profitPercent = (groups.C.profit / totalProfit) * 100;
+
+    return groups;
+}
+
+// Агрегация финансовых данных по периодам
+function aggregateFinancialData(revenueData, expensesData, period) {
+    const result = {
+        labels: [],
+        revenueValues: [],
+        expensesValues: []
+    };
+
+    if (period === 'day') {
+        // Для дневного представления возвращаем данные как есть
+        const allDates = [...new Set([...Object.keys(revenueData), ...Object.keys(expensesData)])].sort();
+
+        result.labels = allDates.map(date => formatDateForDisplay(date));
+        result.revenueValues = allDates.map(date => revenueData[date] || 0);
+        result.expensesValues = allDates.map(date => expensesData[date] || 0);
+
+        return result;
+    }
+
+    // Для недельного и месячного представлений агрегируем данные
+    const groupedRevenue = aggregateByPeriod(revenueData, period);
+    const groupedExpenses = aggregateByPeriod(expensesData, period);
+
+    // Объединяем ключи из обоих наборов данных
+    const allPeriods = [...new Set([...Object.keys(groupedRevenue), ...Object.keys(groupedExpenses)])].sort();
+
+    result.labels = allPeriods.map(key => {
+        if (period === 'week') {
+            return 'Неделя ' + key;
+        } else if (period === 'month') {
+            const [year, month] = key.split('-');
+            const date = new Date(parseInt(year), parseInt(month) - 1, 1);
+            return getMonthName(date.getMonth()) + ' ' + year;
+        }
+        return key;
+    });
+
+    result.revenueValues = allPeriods.map(key => groupedRevenue[key] || 0);
+    result.expensesValues = allPeriods.map(key => groupedExpenses[key] || 0);
+
+    return result;
+}
+
+// Агрегация данных для одного набора значений
+function aggregateChartData(data, period) {
+    const result = {
+        labels: [],
+        values: []
+    };
+
+    if (period === 'day') {
+        // Для дневного представления возвращаем данные как есть
+        const allDates = Object.keys(data).sort();
+
+        result.labels = allDates.map(date => formatDateForDisplay(date));
+        result.values = allDates.map(date => data[date] || 0);
+
+        return result;
+    }
+
+    // Для недельного и месячного представлений агрегируем данные
+    const groupedData = aggregateByPeriod(data, period);
+
+    // Сортируем ключи
+    const sortedKeys = Object.keys(groupedData).sort();
+
+    result.labels = sortedKeys.map(key => {
+        if (period === 'week') {
+            return 'Неделя ' + key;
+        } else if (period === 'month') {
+const [year, month] = key.split('-');
+            const date = new Date(parseInt(year), parseInt(month) - 1, 1);
+            return getMonthName(date.getMonth()) + ' ' + year;
+        }
+        return key;
+    });
+
+    result.values = sortedKeys.map(key => groupedData[key] || 0);
+
+    return result;
+}
+
+// Агрегация данных по периодам (неделя/месяц)
+function aggregateByPeriod(data, period) {
+    const result = {};
+
+    // Перебираем все даты и агрегируем по выбранному периоду
+    Object.entries(data).forEach(([dateStr, value]) => {
+        const date = new Date(dateStr);
+        let key;
+
+        if (period === 'week') {
+            // Получаем номер недели в году
+            const weekNumber = getWeekNumber(date);
+            key = `${date.getFullYear()}-${weekNumber}`;
+        } else if (period === 'month') {
+            // Используем год и месяц как ключ
+            key = `${date.getFullYear()}-${date.getMonth() + 1}`;
+        }
+
+        if (!result[key]) {
+            result[key] = 0;
+        }
+
+        result[key] += value;
+    });
+
+    return result;
+}
+
+// Получение номера недели в году
+function getWeekNumber(date) {
+    const firstDayOfYear = new Date(date.getFullYear(), 0, 1);
+    const pastDaysOfYear = (date - firstDayOfYear) / 86400000;
+    return Math.ceil((pastDaysOfYear + firstDayOfYear.getDay() + 1) / 7);
+}
+
+// Вычисление скользящего среднего
+function calculateMovingAverage(values, windowSize) {
+    const result = [];
+
+    for (let i = 0; i < values.length; i++) {
+        if (i < windowSize - 1) {
+            // Для начальных точек, где недостаточно предыдущих значений,
+            // используем то же значение, что и в исходном массиве
+            result.push(values[i]);
+        } else {
+            // Вычисляем среднее для окна
+            let sum = 0;
+            for (let j = 0; j < windowSize; j++) {
+                sum += values[i - j];
+            }
+            result.push(sum / windowSize);
+        }
+    }
+
+    return result;
+}
+
+// Генерация данных для прогноза (для демонстрации)
+function generateForecastData(revenueData, forecastDays) {
+    // Преобразуем данные о доходах в массив
+    const dates = Object.keys(revenueData).sort();
+    const values = dates.map(date => revenueData[date] || 0);
+
+    // Расчет среднего и стандартного отклонения
+    const average = values.reduce((sum, val) => sum + val, 0) / values.length;
+    const stdDev = Math.sqrt(
+        values.reduce((sum, val) => sum + Math.pow(val - average, 2), 0) / values.length
+    );
+
+    // Создаем даты для прогноза
+    const lastDate = new Date(dates[dates.length - 1]);
+    const forecastDates = [];
+
+    for (let i = 1; i <= forecastDays; i++) {
+        const nextDate = new Date(lastDate);
+        nextDate.setDate(nextDate.getDate() + i);
+        forecastDates.push(formatDate(nextDate));
+    }
+
+    // Генерируем прогнозные значения с легким трендом роста (5%)
+    const forecastValues = [];
+    const confidenceLower = [];
+    const confidenceUpper = [];
+
+    // Определяем тренд на основе последних 7 дней
+    const lastWeekValues = values.slice(-7);
+    const lastWeekAvg = lastWeekValues.reduce((sum, val) => sum + val, 0) / lastWeekValues.length;
+
+    const growthTrend = 1.05; // 5% рост
+
+    for (let i = 0; i < forecastDays; i++) {
+        // Добавляем небольшой рост и случайный шум
+        const forecast = average * Math.pow(growthTrend, (i+1)/30) + (Math.random() - 0.5) * stdDev;
+        forecastValues.push(forecast);
+
+        // Границы доверительного интервала (±2 стандартных отклонения)
+        confidenceLower.push(Math.max(0, forecast - 2 * stdDev));
+        confidenceUpper.push(forecast + 2 * stdDev);
+    }
+
+    // Объединяем фактические данные и прогноз
+    const result = {
+        labels: [...dates.map(date => formatDateForDisplay(date)), ...forecastDates.map(date => formatDateForDisplay(date))],
+        actualValues: [...values, ...Array(forecastDays).fill(null)],
+        forecastValues: [...Array(dates.length).fill(null), ...forecastValues],
+        confidenceLower: [...Array(dates.length).fill(null), ...confidenceLower],
+        confidenceUpper: [...Array(dates.length).fill(null), ...confidenceUpper]
+    };
+
+    return result;
+}
+
+// Форматирование даты для отображения
+function formatDateForDisplay(dateString) {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('ru-RU');
+}
+
+// Форматирование даты для input type="date"
+function formatDate(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+
+    return `${year}-${month}-${day}`;
+}
+
+// Получение названия месяца
+function getMonthName(monthIndex) {
+    const months = [
+        'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
+        'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'
+    ];
+    return months[monthIndex];
+}
+
+// Добавьте эту функцию и вызовите её при переключении на вкладку аналитики
+function ensureCanvasElements() {
+    const canvasIds = [
+        'revenueExpensesChart',
+        'profitStructureChart',
+        'netProfitChart',
+        'categorySalesChart',
+        'topProductsChart',
+        'abcPieChart',
+        'forecastChart'
+    ];
+
+    canvasIds.forEach(id => {
+        if (!document.getElementById(id)) {
+            // Находим соответствующий контейнер (предполагается, что это card-body)
+            const container = document.querySelector(`.card-body:has(#${id}), .card-body:empty`);
+            if (container && container.children.length === 0) {
+                const canvas = document.createElement('canvas');
+                canvas.id = id;
+                container.appendChild(canvas);
+                console.log(`Создан canvas с id ${id}`);
+            }
+        }
+    });
+}
 

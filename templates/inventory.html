@@ -50,6 +50,11 @@
                             <i class="bi bi-graph-down-arrow"></i> Расходы
                         </a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" data-tab="analytics">
+                            <i class="bi bi-graph-up"></i> Аналитика
+                        </a>
+                    </li>
                 </ul>
 
                 <div class="sidebar-footer">
@@ -321,6 +326,230 @@
                             </div>
                         </div>
                     </div>
+                    <div id="analytics" class="tab-pane">
+                    <div class="tab-header d-flex justify-content-between align-items-center mb-3">
+                        <h4 class="mb-0">Бизнес-аналитика</h4>
+                        <div class="date-range">
+                            <div class="input-group">
+                                <span class="input-group-text">С</span>
+                                <input type="date" class="form-control" id="analyticsStartDate">
+                                <span class="input-group-text">По</span>
+                                <input type="date" class="form-control" id="analyticsEndDate">
+                                <button class="btn btn-primary" id="analyticsApplyDateRange">
+                                    <i class="bi bi-check"></i> Применить
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- KPI Cards -->
+                    <div class="row mb-4">
+                        <div class="col-md-2">
+                            <div class="card kpi-card">
+                                <div class="card-body text-center">
+                                    <h6 class="card-subtitle mb-1 text-muted">Валовая прибыль</h6>
+                                    <h3 class="card-title" id="grossProfit">₽0</h3>
+                                    <div class="trend up"><i class="bi bi-arrow-up"></i> <span id="grossProfitTrend">0%</span></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="card kpi-card">
+                                <div class="card-body text-center">
+                                    <h6 class="card-subtitle mb-1 text-muted">Маржинальность</h6>
+                                    <h3 class="card-title" id="marginPercent">0%</h3>
+                                    <div class="trend"><i class="bi bi-arrow-right"></i> <span id="marginTrend">0%</span></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="card kpi-card">
+                                <div class="card-body text-center">
+                                    <h6 class="card-subtitle mb-1 text-muted">Оборачиваемость</h6>
+                                    <h3 class="card-title" id="stockTurnover">0</h3>
+                                    <div class="trend"><i class="bi bi-arrow-right"></i> <span id="turnoverTrend">0%</span></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="card kpi-card">
+                                <div class="card-body text-center">
+                                    <h6 class="card-subtitle mb-1 text-muted">Активных товаров</h6>
+                                    <h3 class="card-title" id="activeProducts">0</h3>
+                                    <div class="trend"><i class="bi bi-arrow-right"></i> <span id="productsTrend">0%</span></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="card kpi-card">
+                                <div class="card-body text-center">
+                                    <h6 class="card-subtitle mb-1 text-muted">Средний чек</h6>
+                                    <h3 class="card-title" id="averageCheck">₽0</h3>
+                                    <div class="trend"><i class="bi bi-arrow-right"></i> <span id="avgCheckTrend">0%</span></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="card kpi-card">
+                                <div class="card-body text-center">
+                                    <h6 class="card-subtitle mb-1 text-muted">Рентабельность</h6>
+                                    <h3 class="card-title" id="profitability">0%</h3>
+                                    <div class="trend"><i class="bi bi-arrow-right"></i> <span id="profitabilityTrend">0%</span></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Graphs Section - Row 1 -->
+                    <div class="row mb-4">
+                        <div class="col-md-8">
+                            <div class="card h-100">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <h5 class="card-title mb-0">Доходы и расходы</h5>
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        <button type="button" class="btn btn-outline-primary active" data-period="day" data-target="revexp">День</button>
+                                        <button type="button" class="btn btn-outline-primary" data-period="week" data-target="revexp">Неделя</button>
+                                        <button type="button" class="btn btn-outline-primary" data-period="month" data-target="revexp">Месяц</button>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <canvas id="revenueExpensesChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card h-100">
+                                <div class="card-header">
+                                    <h5 class="card-title">Структура прибыли</h5>
+                                </div>
+                                <div class="card-body d-flex flex-column justify-content-center">
+                                    <canvas id="profitStructureChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Graphs Section - Row 2 -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="card h-100">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <h5 class="card-title mb-0">Чистая прибыль</h5>
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        <button type="button" class="btn btn-outline-primary active" data-period="day" data-target="profit">День</button>
+                                        <button type="button" class="btn btn-outline-primary" data-period="week" data-target="profit">Неделя</button>
+                                        <button type="button" class="btn btn-outline-primary" data-period="month" data-target="profit">Месяц</button>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <canvas id="netProfitChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card h-100">
+                                <div class="card-header">
+                                    <h5 class="card-title">Структура продаж по категориям</h5>
+                                </div>
+                                <div class="card-body">
+                                    <canvas id="categorySalesChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Products Analysis -->
+                    <div class="card mb-4">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="card-title mb-0">Топ товаров</h5>
+                            <div class="btn-group btn-group-sm" role="group">
+                                <button type="button" class="btn btn-outline-primary active" data-sort="profit">По прибыли</button>
+                                <button type="button" class="btn btn-outline-primary" data-sort="sales">По продажам</button>
+                                <button type="button" class="btn btn-outline-primary" data-sort="margin">По марже</button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="topProductsChart" height="300"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- ABC Analysis -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5 class="card-title">ABC-анализ товаров</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <canvas id="abcPieChart"></canvas>
+                                </div>
+                                <div class="col-md-8">
+                                    <div class="table-responsive">
+                                        <table class="table table-sm">
+                                            <thead>
+                                                <tr>
+                                                    <th>Группа</th>
+                                                    <th>Описание</th>
+                                                    <th>Кол-во товаров</th>
+                                                    <th>% от прибыли</th>
+                                                    <th>Рекомендации</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr>
+                                                    <td><span class="badge bg-success">A</span></td>
+                                                    <td>Наиболее ценные товары</td>
+                                                    <td id="groupACount">0</td>
+                                                    <td id="groupAPercent">0%</td>
+                                                    <td>Тщательный контроль запасов, приоритет в закупках</td>
+                                                </tr>
+                                                <tr>
+                                                    <td><span class="badge bg-warning">B</span></td>
+                                                    <td>Товары средней важности</td>
+                                                    <td id="groupBCount">0</td>
+                                                    <td id="groupBPercent">0%</td>
+                                                    <td>Регулярный мониторинг и своевременное пополнение</td>
+                                                </tr>
+                                                <tr>
+                                                    <td><span class="badge bg-secondary">C</span></td>
+                                                    <td>Наименее значимые товары</td>
+                                                    <td id="groupCCount">0</td>
+                                                    <td id="groupCPercent">0%</td>
+                                                    <td>Упрощенное управление, возможно сокращение ассортимента</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Прогноз -->
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="card-title mb-0">Прогноз продаж</h5>
+                            <div class="btn-group btn-group-sm" role="group">
+                                <button type="button" class="btn btn-outline-primary active" data-forecast="30">30 дней</button>
+                                <button type="button" class="btn btn-outline-primary" data-forecast="60">60 дней</button>
+                                <button type="button" class="btn btn-outline-primary" data-forecast="90">90 дней</button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="forecastChart"></canvas>
+                        </div>
+                        <div class="card-footer">
+                            <div class="alert alert-info mb-0">
+                                <div class="d-flex align-items-center">
+                                    <i class="bi bi-info-circle-fill me-2"></i>
+                                    <div>
+                                        <strong>Рекомендации:</strong> <span id="forecastRecommendation">Загрузка рекомендаций...</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 </div>
             </div>
         </div>
