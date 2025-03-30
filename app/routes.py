@@ -119,11 +119,13 @@ async def get_product_all():
     with SessionLocal() as session:
         return service.get_product_all(session)
 
+
 @router.get('/get_warehouses')
 async def get_warehouses():
     """ Получение склада по ID """
     with SessionLocal() as session:
         return service.get_warehouses(session)
+
 
 @router.get('/get_warehouse_by_id/{id_warehouse}')
 async def get_warehouse_by_id(id_warehouse: int):
@@ -153,6 +155,13 @@ async def get_purchase_by_product(id_product: int):
         return service.get_purchase_by_product(session, id_product)
 
 
+@router.get('/get_purchase_by_id/{id}')
+async def get_purchase_by_product(id: int):
+    """ Получение списка закупок по ID товара"""
+    with SessionLocal() as session:
+        return service.get_purchase_by_id(session, id)
+
+
 @router.get('/get_transactions_by_id_product/{id_product}')
 async def get_transaction_by_id_product(id_product: int):
     """ Получение списка операций по ID товара"""
@@ -172,6 +181,7 @@ async def get_transactions_all():
     """ Получение списка операций """
     with SessionLocal() as session:
         return service.get_transactions_all(session)
+
 
 @router.get('/get_categories')
 async def get_categories():
@@ -263,6 +273,8 @@ async def create_user(user: UserBase):
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Ошибка при создании пользователя: {str(e)}"
             )
+
+
 @router.post('/create_role', status_code=201)
 async def create_role(role: RoleBase):
     """ Создание роли """

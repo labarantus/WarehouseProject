@@ -15,6 +15,16 @@ let activeTab = 'products';
 document.addEventListener('DOMContentLoaded', function () {
     console.log('DOM loaded, initializing app...');
 
+    if (!window.Chart) {
+        // Если Chart.js не загружен, добавляем его динамически
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/chart.js';
+        script.onload = function () {
+            console.log('Chart.js загружен успешно');
+        };
+        document.head.appendChild(script);
+    }
+
     // Initialize navigation
     setupNavigation();
 
@@ -37,39 +47,46 @@ document.addEventListener('DOMContentLoaded', function () {
 
 // Setup navigation
 function setupNavigation() {
-    // Get all navigation links
+    // Получаем все навигационные ссылки
     const navLinks = document.querySelectorAll('.sidebar .nav-link');
 
-    // Add click event to each link
+    // Добавляем обработчик события для каждой ссылки
     navLinks.forEach(link => {
-        link.addEventListener('click', function (event) {
+        link.addEventListener('click', function(event) {
             event.preventDefault();
 
-            // Get tab ID
+            // Получаем идентификатор вкладки
             const tabId = this.getAttribute('data-tab');
 
-            // Update active tab
-            activeTab = tabId;
-
-            // Update active link
+            // Обновляем активную ссылку
             navLinks.forEach(l => l.classList.remove('active'));
             this.classList.add('active');
 
-            // Hide all tabs
+            // Скрываем все вкладки
             document.querySelectorAll('.tab-pane').forEach(tab => {
                 tab.classList.remove('active');
             });
 
-            // Show selected tab
+            // Показываем выбранную вкладку
             const selectedTab = document.getElementById(tabId);
             if (selectedTab) {
                 selectedTab.classList.add('active');
 
-                // Load tab data
+                // Управляем видимостью поиска
+                toggleSearchVisibility(tabId);
+
+                // Загружаем данные вкладки
                 loadTabData(tabId);
             }
         });
     });
+
+    // Инициализация видимости поиска на основе активной вкладки при загрузке
+    const activeTab = document.querySelector('.sidebar .nav-link.active');
+    if (activeTab) {
+        const tabId = activeTab.getAttribute('data-tab');
+        toggleSearchVisibility(tabId);
+    }
 }
 
 // Initialize Bootstrap modals
@@ -1668,3 +1685,560 @@ function viewSaleDetails(saleId) {
 function viewWriteoffDetails(writeoffId) {
     alert(`Просмотр деталей списания с ID ${writeoffId} - функция в разработке`);
 }
+
+
+// Глобальные переменные для графиков
+let revenueChart = null;
+let expensesChart = null;
+
+// Загрузка данных доходов при выборе вкладки
+function loadRevenueData() {
+    // Установка дат по умолчанию, если они не были установлены
+    if (!document.getElementById('revenueStartDate').value) {
+        // Установка начальной даты (30 дней назад)
+        const startDate = new Date();
+        startDate.setDate(startDate.getDate() - 30);
+        document.getElementById('revenueStartDate').value = formatDate(startDate);
+    }
+
+    if (!document.getElementById('revenueEndDate').value) {
+        // Установка конечной даты (сегодня)
+        document.getElementById('revenueEndDate').value = formatDate(new Date());
+    }
+
+    // Получение выбранного периода дат
+    const startDate = document.getElementById('revenueStartDate').value;
+    const endDate = document.getElementById('revenueEndDate').value;
+
+    // Проверяем, что контейнер для графика существует
+    const chartContainer = document.querySelector('#revenue .card-body');
+    if (!chartContainer) {
+        console.error('Контейнер для графика не найден');
+        return;
+    }
+
+    // Показываем спиннер загрузки
+    chartContainer.innerHTML = `
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Загрузка...</span>
+            </div>
+            <p class="mt-2">Загрузка данных...</p>
+        </div>
+    `;
+
+    // Асинхронная загрузка данных
+    fetchRevenueData(startDate, endDate)
+        .then(data => {
+            // Создаем canvas для графика
+            chartContainer.innerHTML = '<canvas id="revenueChart" width="400" height="200"></canvas>';
+            // Отображаем данные
+            displayRevenueData(data);
+        })
+        .catch(error => {
+            console.error('Ошибка при загрузке данных о доходах:', error);
+            chartContainer.innerHTML = '<div class="alert alert-danger">Ошибка при загрузке данных. Пожалуйста, попробуйте позже.</div>';
+        });
+}
+
+// Загрузка данных расходов при выборе вкладки
+function loadExpensesData() {
+    // Проверяем, что контейнер для графика существует
+    const chartContainer = document.querySelector('#expenses .card-body');
+    if (!chartContainer) {
+        console.error('Контейнер для графика не найден');
+        return;
+    }
+
+    // Показываем спиннер загрузки
+    chartContainer.innerHTML = `
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Загрузка...</span>
+            </div>
+            <p class="mt-2">Загрузка данных...</p>
+        </div>
+    `;
+
+    // Установка дат по умолчанию, если они не были установлены
+    if (!document.getElementById('expensesStartDate').value) {
+        // Установка начальной даты (30 дней назад)
+        const startDate = new Date();
+        startDate.setDate(startDate.getDate() - 30);
+        document.getElementById('expensesStartDate').value = formatDate(startDate);
+    }
+
+    if (!document.getElementById('expensesEndDate').value) {
+        // Установка конечной даты (сегодня)
+        document.getElementById('expensesEndDate').value = formatDate(new Date());
+    }
+
+    // Получение выбранного периода дат
+    const startDate = document.getElementById('expensesStartDate').value;
+    const endDate = document.getElementById('expensesEndDate').value;
+
+    // Асинхронная загрузка данных расходов за период
+    fetchExpensesData(startDate, endDate)
+        .then(data => {
+            // Создаем canvas для графика
+            chartContainer.innerHTML = '<canvas id="expensesChart" width="400" height="200"></canvas>';
+            // Отображаем данные
+            displayExpensesData(data);
+        })
+        .catch(error => {
+            console.error('Ошибка при загрузке данных о расходах:', error);
+            chartContainer.innerHTML = '<div class="alert alert-danger">Ошибка при загрузке данных. Пожалуйста, попробуйте позже.</div>';
+        });
+}
+
+// Функция для запроса данных о доходах
+async function fetchRevenueData(startDate, endDate) {
+    try {
+        // В реальном приложении здесь был бы запрос к API
+        // Для демонстрации возвращаем тестовые данные
+        const response = await fetch(`${API_BASE_URL}/get_transactions_by_type/1`);
+        if (!response.ok) throw new Error('Не удалось загрузить данные о реализациях');
+
+        const transactions = await response.json();
+
+        // Фильтрация транзакций по периоду дат
+        const filteredTransactions = transactions.filter(transaction => {
+            const transactionDate = new Date(transaction.created_on);
+            return transactionDate >= new Date(startDate) &&
+                transactionDate <= new Date(endDate + 'T23:59:59');
+        });
+
+        // Группировка по дням и подсчет сумм
+        const revenueByDay = {};
+
+        for (const transaction of filteredTransactions) {
+            // Для получения закупки, чтобы узнать цену
+            const purchaseResponse = await fetch(`${API_BASE_URL}/get_purchase_by_id/${transaction.id_purchase}`);
+            if (!purchaseResponse.ok) continue;
+
+            const purchase = await purchaseResponse.json();
+
+            // Расчет выручки
+            const revenue = purchase.selling_price * transaction.amount;
+
+            // Получение даты (только день)
+            const date = transaction.created_on.split('T')[0];
+
+            if (!revenueByDay[date]) {
+                revenueByDay[date] = 0;
+            }
+
+            revenueByDay[date] += revenue;
+        }
+
+        // Сортировка дат и формирование итогового массива данных
+        const sortedDates = Object.keys(revenueByDay).sort();
+
+        const chartData = {
+            labels: sortedDates.map(date => formatDateForDisplay(date)),
+            values: sortedDates.map(date => revenueByDay[date]),
+            total: Object.values(revenueByDay).reduce((sum, value) => sum + value, 0),
+            mostProfitableDay: sortedDates.length > 0 ?
+                sortedDates.reduce((a, b) => revenueByDay[a] > revenueByDay[b] ? a : b) : null,
+            averageDaily: sortedDates.length > 0 ?
+                Object.values(revenueByDay).reduce((sum, value) => sum + value, 0) / sortedDates.length : 0
+        };
+
+        return chartData;
+    } catch (error) {
+        console.error('Ошибка при получении данных о доходах:', error);
+        throw error;
+    }
+}
+
+// Функция для запроса данных о расходах
+async function fetchExpensesData(startDate, endDate) {
+    try {
+        // В реальном приложении здесь был бы запрос к API
+        // Для демонстрации возвращаем тестовые данные
+        const response = await fetch(`${API_BASE_URL}/get_transactions_by_type/2`);
+        if (!response.ok) throw new Error('Не удалось загрузить данные о закупках');
+
+        const transactions = await response.json();
+
+        // Фильтрация транзакций по периоду дат
+        const filteredTransactions = transactions.filter(transaction => {
+            const transactionDate = new Date(transaction.created_on);
+            return transactionDate >= new Date(startDate) &&
+                transactionDate <= new Date(endDate + 'T23:59:59');
+        });
+
+        // Группировка по дням и подсчет сумм
+        const expensesByDay = {};
+
+        for (const transaction of filteredTransactions) {
+            // Для получения закупки, чтобы узнать цену
+            const purchaseResponse = await fetch(`${API_BASE_URL}/get_purchase_by_id/${transaction.id_purchase}`);
+            if (!purchaseResponse.ok) continue;
+
+            const purchase = await purchaseResponse.json();
+
+            // Расчет расходов
+            const expense = purchase.purchase_price * transaction.amount;
+
+            // Получение даты (только день)
+            const date = transaction.created_on.split('T')[0];
+
+            if (!expensesByDay[date]) {
+                expensesByDay[date] = 0;
+            }
+
+            expensesByDay[date] += expense;
+        }
+
+        // Сортировка дат и формирование итогового массива данных
+        const sortedDates = Object.keys(expensesByDay).sort();
+
+        const chartData = {
+            labels: sortedDates.map(date => formatDateForDisplay(date)),
+            values: sortedDates.map(date => expensesByDay[date]),
+            total: Object.values(expensesByDay).reduce((sum, value) => sum + value, 0),
+            highestExpenseDay: sortedDates.length > 0 ?
+                sortedDates.reduce((a, b) => expensesByDay[a] > expensesByDay[b] ? a : b) : null,
+            averageDaily: sortedDates.length > 0 ?
+                Object.values(expensesByDay).reduce((sum, value) => sum + value, 0) / sortedDates.length : 0
+        };
+
+        return chartData;
+    } catch (error) {
+        console.error('Ошибка при получении данных о расходах:', error);
+        throw error;
+    }
+}
+
+// Отображение данных доходов
+function displayRevenueData(data) {
+    // Обновление элемента canvas для графика
+    const aggregatedData = aggregateDataByPeriod(data, revenuePeriod);
+    const chartContainer = document.getElementById('revenueChart').parentNode;
+    chartContainer.innerHTML = '<canvas id="revenueChart" width="400" height="200"></canvas>';
+
+    // Создание графика
+    const ctx = document.getElementById('revenueChart').getContext('2d');
+
+    if (revenueChart) {
+        revenueChart.destroy();
+    }
+
+    revenueChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: data.labels,
+            datasets: [{
+                label: 'Доходы (₽)',
+                data: data.values,
+                backgroundColor: 'rgba(76, 175, 80, 0.2)',
+                borderColor: 'rgba(76, 175, 80, 1)',
+                borderWidth: 2,
+                pointRadius: 3,
+                pointBackgroundColor: 'rgba(76, 175, 80, 1)',
+                tension: 0.3
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function (value) {
+                            return '₽' + value.toLocaleString();
+                        }
+                    }
+                }
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function (context) {
+                            return 'Доход: ₽' + context.raw.toLocaleString();
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    // Обновление сводки
+    document.getElementById('totalRevenue').textContent = '₽' + data.total.toLocaleString(undefined, {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    });
+
+    if (data.mostProfitableDay) {
+        document.getElementById('mostProfitableDay').textContent = formatDateForDisplay(data.mostProfitableDay) +
+            ' (₽' + Math.round(data.values[data.labels.indexOf(formatDateForDisplay(data.mostProfitableDay))]).toLocaleString() + ')';
+    } else {
+        document.getElementById('mostProfitableDay').textContent = 'Нет данных';
+    }
+
+    document.getElementById('averageDailyRevenue').textContent = '₽' + data.averageDaily.toLocaleString(undefined, {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    });
+}
+
+// Отображение данных расходов
+function displayExpensesData(data) {
+    // Обновление элемента canvas для графика
+    const chartContainer = document.getElementById('expensesChart').parentNode;
+    chartContainer.innerHTML = '<canvas id="expensesChart" width="400" height="200"></canvas>';
+
+    // Создание графика
+    const ctx = document.getElementById('expensesChart').getContext('2d');
+
+    if (expensesChart) {
+        expensesChart.destroy();
+    }
+
+    expensesChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: data.labels,
+            datasets: [{
+                label: 'Расходы (₽)',
+                data: data.values,
+                backgroundColor: 'rgba(244, 67, 54, 0.2)',
+                borderColor: 'rgba(244, 67, 54, 1)',
+                borderWidth: 2,
+                pointRadius: 3,
+                pointBackgroundColor: 'rgba(244, 67, 54, 1)',
+                tension: 0.3
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function (value) {
+                            return '₽' + value.toLocaleString();
+                        }
+                    }
+                }
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function (context) {
+                            return 'Расход: ₽' + context.raw.toLocaleString();
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    // Обновление сводки
+    document.getElementById('totalExpenses').textContent = '₽' + data.total.toLocaleString(undefined, {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    });
+
+    if (data.highestExpenseDay) {
+        document.getElementById('highestExpenseDay').textContent = formatDateForDisplay(data.highestExpenseDay) +
+            ' (₽' + Math.round(data.values[data.labels.indexOf(formatDateForDisplay(data.highestExpenseDay))]).toLocaleString() + ')';
+    } else {
+        document.getElementById('highestExpenseDay').textContent = 'Нет данных';
+    }
+
+    document.getElementById('averageDailyExpenses').textContent = '₽' + data.averageDaily.toLocaleString(undefined, {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    });
+}
+
+// Вспомогательная функция форматирования даты для input type="date"
+function formatDate(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+
+    return `${year}-${month}-${day}`;
+}
+
+// Форматирование даты для отображения
+function formatDateForDisplay(dateString) {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('ru-RU');
+}
+
+// Добавление обработчиков событий для вкладок и фильтров
+document.addEventListener('DOMContentLoaded', function () {
+    // Обработчики для кнопок применения фильтра дат
+    const revenueApplyButton = document.getElementById('revenueApplyDateRange');
+    if (revenueApplyButton) {
+        revenueApplyButton.addEventListener('click', loadRevenueData);
+    }
+
+    const expensesApplyButton = document.getElementById('expensesApplyDateRange');
+    if (expensesApplyButton) {
+        expensesApplyButton.addEventListener('click', loadExpensesData);
+    }
+
+    // Модифицируем existing setupNavigation или добавляем обработчики вкладок
+    const existingSetupNavigation = window.setupNavigation;
+
+    window.setupNavigation = function () {
+        if (typeof existingSetupNavigation === 'function') {
+            existingSetupNavigation();
+        }
+
+        // Получаем все ссылки навигации
+        const navLinks = document.querySelectorAll('.sidebar .nav-link');
+
+        // Добавляем обработчики для финансовых вкладок
+        navLinks.forEach(link => {
+            link.addEventListener('click', function () {
+                const tabId = this.getAttribute('data-tab');
+
+                if (tabId === 'revenue') {
+                    loadRevenueData();
+                } else if (tabId === 'expenses') {
+                    loadExpensesData();
+                }
+            });
+        });
+    };
+
+    // Вызываем обновленную функцию setupNavigation, если страница уже загружена
+    if (document.readyState === 'complete' || document.readyState === 'interactive') {
+        window.setupNavigation();
+    }
+});
+
+// Глобальные переменные для хранения текущего периода агрегации
+let revenuePeriod = 'day';
+let expensesPeriod = 'day';
+
+// Функции для агрегации данных по разным периодам
+function aggregateDataByPeriod(rawData, period) {
+    if (!rawData || !rawData.labels || !rawData.values || rawData.labels.length === 0) {
+        return rawData;
+    }
+
+    // Если выбраны дни, возвращаем исходные данные
+    if (period === 'day') {
+        return rawData;
+    }
+
+    const aggregatedData = {
+        labels: [],
+        values: [],
+        total: rawData.total,
+        averageDaily: rawData.averageDaily
+    };
+
+    // Преобразуем даты из формата "DD.MM.YYYY" в объекты Date
+    const dates = rawData.labels.map(label => {
+        const parts = label.split('.');
+        return new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+    });
+
+    // Создаем объект для группировки данных
+    const groupedData = {};
+
+    for (let i = 0; i < dates.length; i++) {
+        const date = dates[i];
+        let key = '';
+
+        if (period === 'week') {
+            // Получаем начало недели (понедельник)
+            const day = date.getDay();
+            const diff = date.getDate() - day + (day === 0 ? -6 : 1); // поправка для воскресенья
+            const monday = new Date(date);
+            monday.setDate(diff);
+
+            key = `${monday.getDate().toString().padStart(2, '0')}.${(monday.getMonth() + 1).toString().padStart(2, '0')}.${monday.getFullYear()}`;
+        } else if (period === 'month') {
+            // Используем месяц и год как ключ
+            key = `${(date.getMonth() + 1).toString().padStart(2, '0')}.${date.getFullYear()}`;
+        }
+
+        if (!groupedData[key]) {
+            groupedData[key] = {
+                sum: 0,
+                count: 0,
+                label: period === 'month' ? getMonthName(date.getMonth()) + ' ' + date.getFullYear() : 'Неделя с ' + key
+            };
+        }
+
+        groupedData[key].sum += rawData.values[i];
+        groupedData[key].count++;
+    }
+
+    // Сортируем ключи по дате
+    const sortedKeys = Object.keys(groupedData).sort((a, b) => {
+        if (period === 'month') {
+            const [monthA, yearA] = a.split('.');
+            const [monthB, yearB] = b.split('.');
+
+            if (yearA !== yearB) {
+                return parseInt(yearA) - parseInt(yearB);
+            }
+            return parseInt(monthA) - parseInt(monthB);
+        }
+
+        // Для недель используем сортировку по дате
+        const partsA = a.split('.');
+        const partsB = b.split('.');
+
+        const dateA = new Date(parseInt(partsA[2]), parseInt(partsA[1]) - 1, parseInt(partsA[0]));
+        const dateB = new Date(parseInt(partsB[2]), parseInt(partsB[1]) - 1, parseInt(partsB[0]));
+
+        return dateA - dateB;
+    });
+
+    // Создаем итоговые агрегированные данные
+    aggregatedData.labels = sortedKeys.map(key => groupedData[key].label);
+    aggregatedData.values = sortedKeys.map(key => groupedData[key].sum);
+
+    // Находим наиболее прибыльный/затратный период
+    const maxIndex = aggregatedData.values.indexOf(Math.max(...aggregatedData.values));
+
+    if (period === 'week') {
+        aggregatedData.mostProfitableDay = 'Неделя с ' + sortedKeys[maxIndex];
+        aggregatedData.highestExpenseDay = 'Неделя с ' + sortedKeys[maxIndex];
+    } else if (period === 'month') {
+        const [month, year] = sortedKeys[maxIndex].split('.');
+        const date = new Date(parseInt(year), parseInt(month) - 1, 1);
+        aggregatedData.mostProfitableDay = getMonthName(date.getMonth()) + ' ' + date.getFullYear();
+        aggregatedData.highestExpenseDay = getMonthName(date.getMonth()) + ' ' + date.getFullYear();
+    }
+
+    return aggregatedData;
+}
+
+// Вспомогательная функция для получения названия месяца
+function getMonthName(monthIndex) {
+    const months = [
+        'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
+        'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'
+    ];
+    return months[monthIndex];
+}
+
+// Добавьте эту функцию для управления видимостью поиска
+function toggleSearchVisibility(tabId) {
+    const searchBar = document.querySelector('.search-bar');
+    if (!searchBar) return;
+
+    // Скрываем поиск на вкладках доходов и расходов
+    if (tabId === 'revenue' || tabId === 'expenses') {
+        searchBar.style.display = 'none';
+    } else {
+        searchBar.style.display = 'flex';  // или 'block', в зависимости от вашего CSS
+    }
+}
+
+// Модифицируем существующую функцию setupNavigation
+// или добавим код в обработчик переключения вкладок
+

@@ -40,6 +40,16 @@
                             <i class="bi bi-trash"></i> Списания
                         </a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" data-tab="revenue">
+                            <i class="bi bi-graph-up-arrow"></i> Доходы
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" data-tab="expenses">
+                            <i class="bi bi-graph-down-arrow"></i> Расходы
+                        </a>
+                    </li>
                 </ul>
 
                 <div class="sidebar-footer">
@@ -188,9 +198,132 @@
                             </table>
                         </div>
                     </div>
+                    <!-- Revenue Tab (Доходы) -->
+                    <div id="revenue" class="tab-pane">
+                        <div class="tab-header d-flex justify-content-between align-items-center mb-3">
+                            <h4 class="mb-0">Доходы от реализации</h4>
+                            <div class="date-range">
+                                <div class="input-group">
+                                    <span class="input-group-text">С</span>
+                                    <input type="date" class="form-control" id="revenueStartDate">
+                                    <span class="input-group-text">По</span>
+                                    <input type="date" class="form-control" id="revenueEndDate">
+                                    <button class="btn btn-primary" id="revenueApplyDateRange">
+                                        <i class="bi bi-check"></i> Применить
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="card mb-4">
+                                    <div class="card-body">
+                                        <canvas id="revenueChart" width="400" height="200"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h5 class="card-title">Сводка по доходам</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-md-4">
+                                                <div class="card bg-light">
+                                                    <div class="card-body text-center">
+                                                        <h6 class="card-subtitle mb-2 text-muted">Общий доход за период</h6>
+                                                        <h3 class="card-title" id="totalRevenue">₽0.00</h3>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="card bg-light">
+                                                    <div class="card-body text-center">
+                                                        <h6 class="card-subtitle mb-2 text-muted">Наиболее доходный день</h6>
+                                                        <h3 class="card-title" id="mostProfitableDay">-</h3>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="card bg-light">
+                                                    <div class="card-body text-center">
+                                                        <h6 class="card-subtitle mb-2 text-muted">Средний ежедневный доход</h6>
+                                                        <h3 class="card-title" id="averageDailyRevenue">₽0.00</h3>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Expenses Tab (Расходы) -->
+                    <div id="expenses" class="tab-pane">
+                        <div class="tab-header d-flex justify-content-between align-items-center mb-3">
+                            <h4 class="mb-0">Расходы на закупки</h4>
+                            <div class="date-range">
+                                <div class="input-group">
+                                    <span class="input-group-text">С</span>
+                                    <input type="date" class="form-control" id="expensesStartDate">
+                                    <span class="input-group-text">По</span>
+                                    <input type="date" class="form-control" id="expensesEndDate">
+                                    <button class="btn btn-primary" id="expensesApplyDateRange">
+                                        <i class="bi bi-check"></i> Применить
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="card mb-4">
+                                    <div class="card-body">
+                                        <canvas id="expensesChart" width="400" height="200"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h5 class="card-title">Сводка по расходам</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-md-4">
+                                                <div class="card bg-light">
+                                                    <div class="card-body text-center">
+                                                        <h6 class="card-subtitle mb-2 text-muted">Общие расходы за период</h6>
+                                                        <h3 class="card-title" id="totalExpenses">₽0.00</h3>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="card bg-light">
+                                                    <div class="card-body text-center">
+                                                        <h6 class="card-subtitle mb-2 text-muted">День с наибольшими расходами</h6>
+                                                        <h3 class="card-title" id="highestExpenseDay">-</h3>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="card bg-light">
+                                                    <div class="card-body text-center">
+                                                        <h6 class="card-subtitle mb-2 text-muted">Средние ежедневные расходы</h6>
+                                                        <h3 class="card-title" id="averageDailyExpenses">₽0.00</h3>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
-    </div>
 
     <!-- Add Product Modal -->
     <div class="modal fade" id="addProductModal" tabindex="-1" aria-labelledby="addProductModalLabel" aria-hidden="true">
@@ -396,5 +529,6 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
     <!-- Custom JS -->
     <script src="{{ url_for('static', path='/js/inventory.js') }}"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </body>
 </html>
