@@ -4591,6 +4591,27 @@ function displayForecastMetrics(forecastData) {
             </div>
         </div>
     `;
+    if (!document.getElementById('forecast-metrics-style')) {
+        const style = document.createElement('style');
+        style.id = 'forecast-metrics-style';
+        style.textContent = `
+            .metric {
+                text-align: center;
+                padding: 10px;
+            }
+            .metric-title {
+                font-size: 0.8rem;
+                color: #6c757d;
+                margin-bottom: 5px;
+            }
+            .metric-value {
+                font-size: 1.1rem;
+                font-weight: 600;
+                color: #212529;
+            }
+        `;
+        document.head.appendChild(style);
+    }
 }
 // Форматирование даты для отображения
 function formatDateForDisplay(dateString) {
