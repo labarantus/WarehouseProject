@@ -7,7 +7,7 @@ from .config import SessionLocal
 from models.dto.product_dto import ProductDTO, ProductBase
 from models.dto.warehouse_dto import WarehouseDTO, WarehouseBase
 from models.dto.category_dto import CategoryDTO, CategoryBase
-from models.dto.user_dto import UserDTO, UserBase
+from models.dto.user_dto import UserDTO, UserBase, UserRoleUpdate
 from models.dto.role_dto import RoleDTO, RoleBase
 from models.dto.purchase_dto import PurchaseDTO, PurchaseBase
 from models.dto.transaction_dto import TransactionDTO, TransactionBase, TypeTransactionDTO
@@ -81,9 +81,13 @@ async def authenticate(auth_data: AuthRequest):
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
-        # В реальном приложении здесь должна быть проверка пароля
-        # Например: if not check_password_hash(user.password, auth_data.password):
-        # Для демо просто проверяем существование пользователя
+        # Проверка пароля с использованием werkzeug.security
+        if not check_password_hash(user.password, auth_data.password):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Неверные учетные данные",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
 
         # Генерируем токен
         token = secrets.token_hex(32)
@@ -146,6 +150,12 @@ async def get_user_by_login(login: str):
     """ Получение пользователя по логину """
     with SessionLocal() as session:
         return service.get_user_by_login(session, login)
+
+@router.get('/get_all_users')
+async def get_all_users():
+    """ Получение пользователя по логину """
+    with SessionLocal() as session:
+        return service.get_all_users(session)
 
 
 @router.get('/get_purchase_by_product/{id_product}')
@@ -366,12 +376,17 @@ async def update_user_password(user_login: str, new_password: str):
         return service.update_user_password(session, user_login, new_password)
 
 
-@router.put('/update_user_role', status_code=201)
-async def update_user_role(user_login: str, new_role_id: int):
-    """ Обновление роли пользователя """
+@router.put('/update_user_role', status_code=200)
+async def update_user_role(user_data: UserRoleUpdate):
+    """Обновление роли пользователя"""
     with SessionLocal() as session:
-        return service.update_user_role(session, user_login, new_role_id)
-
+        success = service.update_user_role(session, user_data.user_login, user_data.new_role_id)
+        if not success:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Пользователь не найден"
+            )
+        return {"status": "success"}
 
 @router.delete('/delete_transaction_by_id_product', status_code=201)
 async def delete_transaction_by_id_product(id_product: int):

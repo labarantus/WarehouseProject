@@ -55,6 +55,11 @@
                             <i class="bi bi-graph-up"></i> Аналитика
                         </a>
                     </li>
+                    <li class="nav-item admin-only">
+                        <a class="nav-link" href="#" data-tab="users">
+                            <i class="bi bi-people"></i> Пользователи
+                        </a>
+                    </li>
                 </ul>
 
                 <div class="sidebar-footer">
@@ -326,6 +331,29 @@
                             </div>
                         </div>
                     </div>
+                    <div id="users" class="tab-pane">
+                    <div class="tab-header d-flex justify-content-between align-items-center mb-3">
+                        <h4 class="mb-0">Управление ролями пользователей</h4>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Логин</th>
+                                    <th>Текущая роль</th>
+                                    <th>Действия</th>
+                                </tr>
+                            </thead>
+                            <tbody id="usersTableBody">
+                                <!-- Данные будут загружены через JavaScript -->
+                                <tr>
+                                    <td colspan="4" class="text-center">Загрузка данных...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
                     <div id="analytics" class="tab-pane">
                     <div class="tab-header d-flex justify-content-between align-items-center mb-3">
                         <h4 class="mb-0">Бизнес-аналитика</h4>
@@ -344,57 +372,43 @@
 
                     <!-- KPI Cards -->
                     <div class="row mb-4">
-                        <div class="col-md-2">
+                        <div class="col-md">
                             <div class="card kpi-card">
                                 <div class="card-body text-center">
                                     <h6 class="card-subtitle mb-1 text-muted">Валовая прибыль</h6>
                                     <h3 class="card-title" id="grossProfit">₽0</h3>
-                                    <div class="trend up"><i class="bi bi-arrow-up"></i> <span id="grossProfitTrend">0%</span></div>
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-2">
+                        <div class="col-md">
                             <div class="card kpi-card">
                                 <div class="card-body text-center">
                                     <h6 class="card-subtitle mb-1 text-muted">Маржинальность</h6>
                                     <h3 class="card-title" id="marginPercent">0%</h3>
-                                    <div class="trend"><i class="bi bi-arrow-right"></i> <span id="marginTrend">0%</span></div>
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-2">
+                        <div class="col-md">
                             <div class="card kpi-card">
                                 <div class="card-body text-center">
                                     <h6 class="card-subtitle mb-1 text-muted">Оборачиваемость</h6>
                                     <h3 class="card-title" id="stockTurnover">0</h3>
-                                    <div class="trend"><i class="bi bi-arrow-right"></i> <span id="turnoverTrend">0%</span></div>
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-2">
+                        <div class="col-md">
                             <div class="card kpi-card">
                                 <div class="card-body text-center">
                                     <h6 class="card-subtitle mb-1 text-muted">Активных товаров</h6>
                                     <h3 class="card-title" id="activeProducts">0</h3>
-                                    <div class="trend"><i class="bi bi-arrow-right"></i> <span id="productsTrend">0%</span></div>
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-2">
+                        <div class="col-md">
                             <div class="card kpi-card">
                                 <div class="card-body text-center">
                                     <h6 class="card-subtitle mb-1 text-muted">Средний чек</h6>
                                     <h3 class="card-title" id="averageCheck">₽0</h3>
-                                    <div class="trend"><i class="bi bi-arrow-right"></i> <span id="avgCheckTrend">0%</span></div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-2">
-                            <div class="card kpi-card">
-                                <div class="card-body text-center">
-                                    <h6 class="card-subtitle mb-1 text-muted">Рентабельность</h6>
-                                    <h3 class="card-title" id="profitability">0%</h3>
-                                    <div class="trend"><i class="bi bi-arrow-right"></i> <span id="profitabilityTrend">0%</span></div>
                                 </div>
                             </div>
                         </div>
@@ -529,11 +543,6 @@
                     <div class="card">
                         <div class="card-header d-flex justify-content-between align-items-center">
                             <h5 class="card-title mb-0">Прогноз продаж</h5>
-                            <div class="btn-group btn-group-sm" role="group">
-                                <button type="button" class="btn btn-outline-primary active" data-forecast="30">30 дней</button>
-                                <button type="button" class="btn btn-outline-primary" data-forecast="60">60 дней</button>
-                                <button type="button" class="btn btn-outline-primary" data-forecast="90">90 дней</button>
-                            </div>
                         </div>
                         <div class="card-body">
                             <canvas id="forecastChart"></canvas>
@@ -748,6 +757,49 @@
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
                     <button type="button" class="btn btn-danger" id="saveWriteoffButton">
                         <i class="bi bi-check me-1"></i>Оформить списание
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal fade" id="changeRoleModal" tabindex="-1" aria-labelledby="changeRoleModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="changeRoleModalLabel">Изменение роли пользователя</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="changeRoleForm">
+                        <input type="hidden" id="userIdForRole" value="">
+
+                        <!-- Информация о пользователе -->
+                        <div class="mb-3">
+                            <label class="form-label">Пользователь</label>
+                            <div class="form-control bg-light" id="userLoginDisplay"></div>
+                        </div>
+
+                        <!-- Текущая роль -->
+                        <div class="mb-3">
+                            <label class="form-label">Текущая роль</label>
+                            <div class="form-control bg-light" id="currentRoleDisplay"></div>
+                        </div>
+
+                        <!-- Выбор новой роли -->
+                        <div class="mb-3">
+                            <label for="newUserRole" class="form-label">Новая роль</label>
+                            <select class="form-select" id="newUserRole" required>
+                                <option value="" disabled selected>Выберите роль</option>
+                                <option value="1">Администратор</option>
+                                <option value="2">Продавец</option>
+                            </select>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="button" class="btn btn-primary" id="saveRoleButton">
+                        <i class="bi bi-save me-1"></i>Сохранить
                     </button>
                 </div>
             </div>

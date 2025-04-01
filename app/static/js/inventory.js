@@ -39,6 +39,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Load initial data
     loadProductsData();
+    // Load user management data.
+    initializeUserManagement();
 
     // Setup buttons and form handlers
     setupButtons();
@@ -47,7 +49,7 @@ document.addEventListener('DOMContentLoaded', function () {
     setupTopProductsButtons();
     setupForecastButtons();
 
-        // Обработчик для кнопки применения фильтра дат
+    // Обработчик для кнопки применения фильтра дат
     const analyticsApplyButton = document.getElementById('analyticsApplyDateRange');
     if (analyticsApplyButton) {
         analyticsApplyButton.addEventListener('click', loadAnalyticsData);
@@ -56,7 +58,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // Интеграция с существующей навигацией
     const existingSetupNavigation = window.setupNavigation;
 
-    window.setupNavigation = function() {
+    window.setupNavigation = function () {
         if (typeof existingSetupNavigation === 'function') {
             existingSetupNavigation();
         }
@@ -66,7 +68,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         // Добавляем обработчик для вкладки аналитики
         navLinks.forEach(link => {
-            link.addEventListener('click', function() {
+            link.addEventListener('click', function () {
                 const tabId = this.getAttribute('data-tab');
 
                 if (tabId === 'analytics') {
@@ -95,7 +97,7 @@ document.addEventListener('DOMContentLoaded', function () {
         // Если Chart.js не загружен, добавляем его динамически
         const script = document.createElement('script');
         script.src = 'https://cdn.jsdelivr.net/npm/chart.js';
-        script.onload = function() {
+        script.onload = function () {
             console.log('Chart.js загружен успешно');
 
             // Если текущая вкладка - аналитика, загружаем данные
@@ -116,7 +118,7 @@ function setupNavigation() {
 
     // Добавляем обработчик события для каждой ссылки
     navLinks.forEach(link => {
-        link.addEventListener('click', function(event) {
+        link.addEventListener('click', function (event) {
             event.preventDefault();
 
             // Получаем идентификатор вкладки
@@ -147,6 +149,7 @@ function setupNavigation() {
 
     // Инициализация видимости поиска на основе активной вкладки при загрузке
     const activeTab = document.querySelector('.sidebar .nav-link.active');
+    console.log(activeTab);
     if (activeTab) {
         const tabId = activeTab.getAttribute('data-tab');
         toggleSearchVisibility(tabId);
@@ -157,7 +160,7 @@ function setupNavigation() {
 function setupRevexpPeriodButtons() {
     const revexpPeriodButtons = document.querySelectorAll('.btn-group[role="group"] button[data-target="revexp"]');
     revexpPeriodButtons.forEach(button => {
-        button.addEventListener('click', function() {
+        button.addEventListener('click', function () {
             // Обновляем глобальную переменную периода
             revexpPeriod = this.getAttribute('data-period');
 
@@ -177,7 +180,7 @@ function setupRevexpPeriodButtons() {
 function setupProfitPeriodButtons() {
     const profitPeriodButtons = document.querySelectorAll('.btn-group[role="group"] button[data-target="profit"]');
     profitPeriodButtons.forEach(button => {
-        button.addEventListener('click', function() {
+        button.addEventListener('click', function () {
             // Обновляем глобальную переменную периода
             profitPeriod = this.getAttribute('data-period');
 
@@ -197,7 +200,7 @@ function setupProfitPeriodButtons() {
 function setupTopProductsButtons() {
     const topProductsSortButtons = document.querySelectorAll('.btn-group[role="group"] button[data-sort]');
     topProductsSortButtons.forEach(button => {
-        button.addEventListener('click', function() {
+        button.addEventListener('click', function () {
             // Обновляем глобальную переменную сортировки
             topProductsSort = this.getAttribute('data-sort');
 
@@ -217,7 +220,7 @@ function setupTopProductsButtons() {
 function setupForecastButtons() {
     const forecastButtons = document.querySelectorAll('.btn-group[role="group"] button[data-forecast]');
     forecastButtons.forEach(button => {
-        button.addEventListener('click', function() {
+        button.addEventListener('click', function () {
             // Обновляем глобальную переменную дней прогноза
             forecastDays = parseInt(this.getAttribute('data-forecast'));
 
@@ -244,12 +247,32 @@ function initializeModals() {
 // Check if user is authenticated
 function checkAuthentication() {
     const userLogin = sessionStorage.getItem('warehouseUserLogin') || localStorage.getItem('warehouseUserLogin');
+    const userRole = parseInt(sessionStorage.getItem('warehouseUserRole')) || localStorage.getItem('warehouseUserRole' || "0");
+
 
     if (userLogin) {
         // Set username
         const usernameElement = document.getElementById('username');
         if (usernameElement) {
             usernameElement.textContent = userLogin;
+        }
+        // Проверяем роль пользователя и ограничиваем доступ к аналитике и редакту пользователей
+        if (userRole !== 1) {
+            const analyticsMenuItem = document.querySelector('.nav-link[data-tab="analytics"]');
+            const usersMenuItem = document.querySelector('.nav-link[data-tab="users"]');
+            if (analyticsMenuItem) {
+                analyticsMenuItem.parentElement.style.display = 'none';
+            }
+            if (usersMenuItem) {
+                usersMenuItem.parentElement.style.display = 'none';
+            }
+
+            // Скрываем вкладку аналитики, если она существует
+            const analyticsTab = document.getElementById('analytics');
+            if (analyticsTab) {
+                analyticsTab.style.display = 'none';
+            }
+
         }
     } else {
         // Redirect to login
@@ -260,7 +283,7 @@ function checkAuthentication() {
 // Load data for the active tab
 function loadTabData(tabId) {
     console.log(`Loading data for tab: ${tabId}`);
-
+    activeTab = tabId;
     switch (tabId) {
         case 'products':
             loadProductsData();
@@ -276,6 +299,9 @@ function loadTabData(tabId) {
             break;
         case 'analytics':
             loadAnalyticsData();
+            break;
+        case 'users':
+            loadUsersData();
             break;
     }
 }
@@ -422,14 +448,159 @@ function setupButtons() {
     if (searchButton) {
         searchButton.addEventListener('click', function () {
             const searchInput = document.getElementById('searchInput');
-            if (searchInput) {
-                const searchTerm = searchInput.value.toLowerCase();
+            console.log("Нажата кнопка поиска");
+            const searchTerm = searchInput.value.toLowerCase();
+            console.log("Фраза для поиска: ", searchTerm);
+            filterTableBySearchTerm(searchTerm);
+        });
+    }
+
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+        searchInput.addEventListener('keyup', function(event) {
+            if (event.key === 'Enter') {
+                const searchTerm = this.value.toLowerCase().trim();
                 filterTableBySearchTerm(searchTerm);
             }
         });
     }
 }
 
+// Загрузка данных о пользователях
+async function loadUsersData() {
+    const tableBody = document.getElementById('usersTableBody');
+    if (!tableBody) return;
+
+    // Показываем сообщение о загрузке
+    tableBody.innerHTML = '<tr><td colspan="4" class="text-center">Загрузка данных...</td></tr>';
+
+    try {
+        // Загружаем список пользователей через API
+        const response = await fetch(`${API_BASE_URL}/get_all_users`);
+
+        if (!response.ok) {
+            throw new Error('Не удалось загрузить пользователей');
+        }
+
+        const users = await response.json();
+
+        if (!users || users.length === 0) {
+            tableBody.innerHTML = '<tr><td colspan="4" class="text-center">Нет пользователей</td></tr>';
+            return;
+        }
+
+        // Очищаем таблицу
+        tableBody.innerHTML = '';
+
+        // Добавляем каждого пользователя в таблицу
+        for (const user of users) {
+            // Получаем название роли
+            let roleName = 'Неизвестно';
+            switch (user.id_role) {
+                case 1:
+                    roleName = 'Администратор';
+                    break;
+                case 2:
+                    roleName = 'Продавец';
+                    break;
+            }
+            // Делаем проверку на то, может ли пользователь редактировать себя сам (НЕ МОЖЕТ!)
+            const currentUserLogin = sessionStorage.getItem('warehouseUserLogin') || localStorage.getItem('warehouseUserLogin');
+            const canEdit = user.login !== currentUserLogin;
+            // Создаем строку
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${user.id}</td>
+                <td>${user.login}</td>
+                <td>${roleName}</td>
+                <td>
+                    ${canEdit ?
+                    `<button class="btn btn-sm btn-outline-primary" onclick="showChangeRoleModal(${user.id}, '${user.login}', ${user.id_role}, '${roleName}')">
+                        <i class="bi bi-shield"></i> Изменить роль
+                    </button>` : ``}
+                </td>
+            `;
+
+            tableBody.appendChild(row);
+        }
+    } catch (error) {
+        console.error('Ошибка при загрузке пользователей:', error);
+        tableBody.innerHTML = `<tr><td colspan="4" class="text-center text-danger">Ошибка: ${error.message}</td></tr>`;
+    }
+}
+
+// Функция для отображения модального окна изменения роли
+function showChangeRoleModal(userId, userLogin, roleId, roleName) {
+    // Заполняем данные пользователя
+    document.getElementById('userIdForRole').value = userId;
+    document.getElementById('userLoginDisplay').textContent = userLogin;
+    document.getElementById('currentRoleDisplay').textContent = roleName;
+
+    // Устанавливаем текущую роль в выпадающем списке
+    const roleSelect = document.getElementById('newUserRole');
+    roleSelect.value = roleId;
+
+    // Показываем модальное окно
+    window.changeRoleModal.show();
+}
+
+// Функция для сохранения новой роли пользователя
+async function saveUserRole() {
+    // Получаем данные из формы
+    const userId = document.getElementById('userIdForRole').value;
+    const userLogin = document.getElementById('userLoginDisplay').textContent;
+    const newRoleId = document.getElementById('newUserRole').value;
+
+    // Проверка выбора роли
+    if (!newRoleId) {
+        alert('Пожалуйста, выберите новую роль');
+        return;
+    }
+
+    try {
+        // Отправляем запрос на обновление роли
+        const response = await fetch(`${API_BASE_URL}/update_user_role/`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                new_role_id: parseInt(newRoleId),
+                user_login: userLogin
+            })
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error("Ошибка API:", errorText);
+            throw new Error(`Не удалось обновить роль пользователя: ${errorText}`);
+        }
+
+        // Закрываем модальное окно
+        window.changeRoleModal.hide();
+
+        // Обновляем таблицу пользователей
+        loadUsersData();
+
+        // Показываем сообщение об успешном обновлении
+        alert(`Роль пользователя ${userLogin} успешно обновлена`);
+    } catch (error) {
+        console.error('Ошибка при обновлении роли:', error);
+        alert(`Ошибка: ${error.message}`);
+    }
+}
+
+// Инициализация модальных окон и обработчиков событий
+function initializeUserManagement() {
+    // Инициализация модального окна для изменения роли
+    window.changeRoleModal = new bootstrap.Modal(document.getElementById('changeRoleModal'));
+
+    // Обработчик кнопки сохранения роли
+    const saveRoleButton = document.getElementById('saveRoleButton');
+    if (saveRoleButton) {
+        saveRoleButton.addEventListener('click', saveUserRole);
+    }
+}
 // Load products data
 async function loadProductsData() {
     const tableBody = document.getElementById('productsTableBody');
@@ -1714,8 +1885,11 @@ async function saveWriteoff() {
 
 // Helper function to filter table by search term
 function filterTableBySearchTerm(searchTerm) {
-    if (!searchTerm) return;
-
+    console.log("Поиск по фразе: ", searchTerm);
+    if (!searchTerm){
+        loadTabData(activeTab);
+        return;
+    }
     let tableBody;
     let cellSelector;
 
@@ -1736,6 +1910,10 @@ function filterTableBySearchTerm(searchTerm) {
             tableBody = document.getElementById('writeoffsTableBody');
             cellSelector = 'td:nth-child(3)'; // Product name column
             break;
+        case 'users':
+            tableBody = document.getElementById('usersTableBody');
+            cellSelector = 'td:nth-child(2)'; // Product name column
+            break;
         default:
             return;
     }
@@ -1744,7 +1922,6 @@ function filterTableBySearchTerm(searchTerm) {
 
     const rows = tableBody.querySelectorAll('tr');
     const lowerSearchTerm = searchTerm.toLowerCase().trim();
-
     rows.forEach(row => {
         const cell = row.querySelector(cellSelector);
         if (!cell) return;
@@ -2520,7 +2697,7 @@ async function fetchAnalyticsData(startDate, endDate) {
             return transactions.filter(transaction => {
                 const transactionDate = new Date(transaction.created_on);
                 return transactionDate >= new Date(startDate) &&
-                       transactionDate <= new Date(endDate + 'T23:59:59');
+                    transactionDate <= new Date(endDate + 'T23:59:59');
             });
         };
 
@@ -2780,9 +2957,6 @@ function updateKPICards(kpi) {
     // Средний чек
     document.getElementById('averageCheck').textContent = formatCurrency(kpi.averageCheck);
 
-    // Рентабельность продаж
-    const profitability = kpi.totalRevenue > 0 ? (kpi.totalProfit / kpi.totalRevenue * 100) : 0;
-    document.getElementById('profitability').textContent = formatPercent(profitability);
 
     // TODO: Добавить тренды (для этого нужны данные предыдущего периода)
     // Пока устанавливаем нейтральные значения
@@ -2852,7 +3026,7 @@ function createRevenueExpensesChart(revenueData, expensesData, period) {
                 y: {
                     beginAtZero: true,
                     ticks: {
-                        callback: function(value) {
+                        callback: function (value) {
                             return '₽' + value.toLocaleString();
                         }
                     }
@@ -2864,7 +3038,7 @@ function createRevenueExpensesChart(revenueData, expensesData, period) {
                 },
                 tooltip: {
                     callbacks: {
-                        label: function(context) {
+                        label: function (context) {
                             return context.dataset.label + ': ₽' + context.raw.toLocaleString();
                         }
                     }
@@ -2918,7 +3092,7 @@ function createProfitStructureChart(kpi) {
                 },
                 tooltip: {
                     callbacks: {
-                        label: function(context) {
+                        label: function (context) {
                             const value = context.raw;
                             const percent = ((value / totalRevenue) * 100).toFixed(1);
                             return context.label + ': ₽' + value.toLocaleString() + ' (' + percent + '%)';
@@ -2994,7 +3168,7 @@ function createNetProfitChart(profitData, period) {
                 y: {
                     beginAtZero: true,
                     ticks: {
-                        callback: function(value) {
+                        callback: function (value) {
                             return '₽' + value.toLocaleString();
                         }
                     }
@@ -3006,7 +3180,7 @@ function createNetProfitChart(profitData, period) {
                 },
                 tooltip: {
                     callbacks: {
-                        label: function(context) {
+                        label: function (context) {
                             return context.dataset.label + ': ₽' + context.raw.toLocaleString();
                         }
                     }
@@ -3062,7 +3236,7 @@ function createCategorySalesChart(salesByCategory) {
                 y: {
                     beginAtZero: true,
                     ticks: {
-                        callback: function(value) {
+                        callback: function (value) {
                             return '₽' + value.toLocaleString();
                         }
                     }
@@ -3074,7 +3248,7 @@ function createCategorySalesChart(salesByCategory) {
                 },
                 tooltip: {
                     callbacks: {
-                        label: function(context) {
+                        label: function (context) {
                             return context.dataset.label + ': ₽' + context.raw.toLocaleString();
                         }
                     }
@@ -3134,10 +3308,10 @@ function createTopProductsChart(topProducts, sortType) {
 
         // Уничтожаем предыдущий график, если он существует
         if (typeof window.topProductsChart !== 'undefined' &&
-        window.topProductsChart &&
-        typeof window.topProductsChart.destroy === 'function') {
-        window.topProductsChart.destroy();
-    }
+            window.topProductsChart &&
+            typeof window.topProductsChart.destroy === 'function') {
+            window.topProductsChart.destroy();
+        }
 
         // Цвета в зависимости от типа сортировки
         const backgroundColor = sortType === 'profit' ?
@@ -3169,7 +3343,7 @@ function createTopProductsChart(topProducts, sortType) {
                     x: {
                         beginAtZero: true,
                         ticks: {
-                            callback: function(value) {
+                            callback: function (value) {
                                 if (sortType === 'margin') {
                                     return value.toFixed(1) + '%';
                                 } else {
@@ -3185,7 +3359,7 @@ function createTopProductsChart(topProducts, sortType) {
                     },
                     tooltip: {
                         callbacks: {
-                            label: function(context) {
+                            label: function (context) {
                                 if (sortType === 'margin') {
                                     return context.dataset.label + ': ' + context.raw.toFixed(1) + '%';
                                 } else {
@@ -3249,7 +3423,7 @@ function createABCPieChart(abcAnalysis) {
                 },
                 tooltip: {
                     callbacks: {
-                        label: function(context) {
+                        label: function (context) {
                             const value = context.raw;
                             return context.label + ': ' + value.toFixed(1) + '% прибыли';
                         }
@@ -3348,7 +3522,7 @@ function createForecastChart(forecastData, days) {
                 y: {
                     beginAtZero: true,
                     ticks: {
-                        callback: function(value) {
+                        callback: function (value) {
                             return '₽' + value.toLocaleString();
                         }
                     }
@@ -3366,7 +3540,7 @@ function createForecastChart(forecastData, days) {
                 },
                 tooltip: {
                     callbacks: {
-                        label: function(context) {
+                        label: function (context) {
                             return context.dataset.label + ': ₽' + context.raw.toLocaleString();
                         }
                     }
@@ -3430,9 +3604,9 @@ function calculateABCAnalysis(products) {
 
     // Инициализируем группы
     const groups = {
-        A: { products: [], profit: 0, count: 0, profitPercent: 0 },
-        B: { products: [], profit: 0, count: 0, profitPercent: 0 },
-        C: { products: [], profit: 0, count: 0, profitPercent: 0 }
+        A: {products: [], profit: 0, count: 0, profitPercent: 0},
+        B: {products: [], profit: 0, count: 0, profitPercent: 0},
+        C: {products: [], profit: 0, count: 0, profitPercent: 0}
     };
 
     // Распределяем товары по группам
@@ -3539,7 +3713,7 @@ function aggregateChartData(data, period) {
         if (period === 'week') {
             return 'Неделя ' + key;
         } else if (period === 'month') {
-const [year, month] = key.split('-');
+            const [year, month] = key.split('-');
             const date = new Date(parseInt(year), parseInt(month) - 1, 1);
             return getMonthName(date.getMonth()) + ' ' + year;
         }
@@ -3659,7 +3833,7 @@ function prepareHistoricalData(historicalData) {
  * Заполнение пропущенных дат интерполированными значениями
  */
 function fillMissingDates(dates, values) {
-    if (dates.length <= 1) return { dates, values };
+    if (dates.length <= 1) return {dates, values};
 
     const allDates = [];
     const allValues = [];
@@ -3702,14 +3876,14 @@ function fillMissingDates(dates, values) {
         }
     }
 
-    return { dates: allDates, values: allValues };
+    return {dates: allDates, values: allValues};
 }
 
 /**
  * Обнаружение и обработка выбросов в данных
  */
 function detectAndHandleOutliers(data) {
-    const { dates, values } = data;
+    const {dates, values} = data;
     const cleanedValues = [...values];
 
     // Расчет квартилей для метода межквартильного размаха (IQR)
@@ -3747,14 +3921,14 @@ function detectAndHandleOutliers(data) {
         }
     }
 
-    return { dates, values: cleanedValues };
+    return {dates, values: cleanedValues};
 }
 
 /**
  * Декомпозиция временного ряда на тренд, сезонность и остатки
  */
 function timeSeriesDecomposition(data) {
-    const { dates, values } = data;
+    const {dates, values} = data;
 
     // 1. Определение тренда с помощью скользящего среднего
     const trendWindow = Math.min(7, Math.floor(values.length / 4)); // Для недельного скользящего среднего
@@ -3889,7 +4063,7 @@ function calculateAutocorrelation(values, maxLag) {
  * Генерация прогноза на основе декомпозиции временного ряда
  */
 function generateForecast(decomposition, forecastDays) {
-    const { dates, values, trend, seasonal, seasonalPeriod, residuals, autocorrelation } = decomposition;
+    const {dates, values, trend, seasonal, seasonalPeriod, residuals, autocorrelation} = decomposition;
 
     // Определяем конечные даты для прогноза
     const lastDate = new Date(dates[dates.length - 1]);
@@ -4132,7 +4306,7 @@ function createForecastChart(forecastData, days) {
                 y: {
                     beginAtZero: true,
                     ticks: {
-                        callback: function(value) {
+                        callback: function (value) {
                             return '₽' + value.toLocaleString();
                         }
                     }
@@ -4150,7 +4324,7 @@ function createForecastChart(forecastData, days) {
                 },
                 tooltip: {
                     callbacks: {
-                        label: function(context) {
+                        label: function (context) {
                             return context.dataset.label + ': ₽' + context.raw.toLocaleString();
                         }
                     }
@@ -4290,7 +4464,7 @@ async function fetchAnalyticsData(startDate, endDate) {
             return transactions.filter(transaction => {
                 const transactionDate = new Date(transaction.created_on);
                 return transactionDate >= new Date(startDate) &&
-                       transactionDate <= new Date(endDate + 'T23:59:59');
+                    transactionDate <= new Date(endDate + 'T23:59:59');
             });
         };
 
@@ -4452,6 +4626,7 @@ async function fetchAnalyticsData(startDate, endDate) {
         throw error;
     }
 }
+
 /**
  * Расширенная версия функции для отображения аналитических данных
  */
@@ -4613,6 +4788,7 @@ function displayForecastMetrics(forecastData) {
         document.head.appendChild(style);
     }
 }
+
 // Форматирование даты для отображения
 function formatDateForDisplay(dateString) {
     const date = new Date(dateString);

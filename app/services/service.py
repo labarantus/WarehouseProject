@@ -172,7 +172,7 @@ def find_next_purchase(db: Session, id_product: int, id_current_purchase: int):
         db.query(Purchase)
         .filter(Purchase.id_product == id_product)  # Фильтр по id_product
         .filter(Purchase.current_count != 0)
-        .filter(Purchase.id != id_current_purchase)# Только записи, где current_count > 0
+        .filter(Purchase.id != id_current_purchase)  # Только записи, где current_count > 0
         .order_by(asc(Purchase.created_on))  # Сортируем по дате (от старых к новым)
         .first()  # Берём самую раннюю запись
     )
@@ -473,6 +473,12 @@ def update_user_role(db: Session, login_user: str, role: int):
     return True
 
 
+def get_all_users(db: Session):
+    """Получение списка всех пользователей"""
+    users = db.query(Users).all()
+    return users
+
+
 # endregion
 
 
@@ -541,7 +547,8 @@ def add_transaction(db: Session, transaction: Transaction) -> bool:
         next_purchase = 0
 
         if transaction.id_type == 1:
-            rest, next_purchase = decrease_purchase_count(db, transaction.id_purchase, transaction.amount, transaction.id_type)
+            rest, next_purchase = decrease_purchase_count(db, transaction.id_purchase, transaction.amount,
+                                                          transaction.id_type)
             if rest > 0:
                 transaction.amount = transaction.amount - rest
 
