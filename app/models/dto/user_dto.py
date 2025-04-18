@@ -10,3 +10,7 @@ class UserBase(BaseModel):
 class UserDTO(UserBase):
     id: int
 
+class UserRoleUpdate(BaseModel):
+    user_login: str
+    new_role_id: int
+

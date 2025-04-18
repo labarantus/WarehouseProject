@@ -8,8 +8,6 @@ from locust import HttpUser, task, tag, between
 # Статичные данные для тестирования
 CITY_NAMES = ['GM', 'prevIndirectCosts', 'saint-petersburg', 'kazan']
 
-WEATHER_TYPES = ['CLEAN', 'CLOUDY', 'RAIN']
-
 
 class RESTServerUser(HttpUser):
     """ Класс, эмулирующий пользователя / клиента сервера """

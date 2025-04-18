@@ -105,6 +105,8 @@ def calc_period_results(db: Session):
     update_param_value(db, "prevIndirectCosts", indirect_costs)
     update_param_value(db, "prevDirectSoldCosts", direct_sold_costs)
     update_param_value(db, "TE", te)
+
+
 # endregion
 
 
@@ -170,10 +172,11 @@ def find_next_purchase(db: Session, id_product: int, id_current_purchase: int):
         db.query(Purchase)
         .filter(Purchase.id_product == id_product)  # Фильтр по id_product
         .filter(Purchase.current_count != 0)
-        .filter(Purchase.id != id_current_purchase)# Только записи, где current_count > 0
+        .filter(Purchase.id != id_current_purchase)  # Только записи, где current_count > 0
         .order_by(asc(Purchase.created_on))  # Сортируем по дате (от старых к новым)
         .first()  # Берём самую раннюю запись
     )
+    print("Эта партия товаров кончилась, теперь списываем с партии номер: ", next_purchase)
 
     if next_purchase:
         return next_purchase.id
@@ -189,6 +192,7 @@ def update_current_purchase(db: Session, id_product: int):
         set_current_purchase(db, product, next_purchase)
     else:
         product.id_purchase = None
+
 
 # endregion
 
@@ -208,7 +212,7 @@ def create_purchase(db: Session, id_product: int, purchase_price: float, id_ware
     total_cost = purchase_price + purchase_price * direct_indirect_ratio
     selling_price = 0
 
-    # если используется метод  FIFO
+    # если используется метод FIFO
     if product.price_mod == 0:
         # расчет розничной цены
         selling_price = math.ceil(total_cost * (1 + gm) / (1 - vat))
@@ -224,7 +228,6 @@ def create_purchase(db: Session, id_product: int, purchase_price: float, id_ware
 
 
 def add_purchase(db: Session, purchase: Purchase, id_user: int):
-
     product = get_product_by_id(db, purchase.id_product)
     if product:
         # увеличиваем количество товара
@@ -324,6 +327,7 @@ def decrease_total_count(db: Session, id_product: int, delta: int):
         raise RuntimeError("Отрицательное общеее количество товара!")
     product.total_count = new_count
 
+
 # endregion
 
 # region
@@ -353,6 +357,11 @@ def get_warehouse_by_id(db: Session, id_warehouse: int):
     return warehouse
 
 
+def get_warehouses(db: Session):
+    warehouse = db.query(Warehouse).all()
+    return warehouse
+
+
 @dbexception
 def update_warehouse_name(db: Session, id_warehouse: int, new_name: str):
     warehouse = get_warehouse_by_id(db, id_warehouse)
@@ -363,6 +372,7 @@ def update_warehouse_name(db: Session, id_warehouse: int, new_name: str):
 def update_warehouse_address(db: Session, id_warehouse: int, new_address: str):
     warehouse = get_warehouse_by_id(db, id_warehouse)
     warehouse.address = new_address
+
 
 # endregion
 
@@ -387,10 +397,17 @@ def get_category_by_id(db: Session, id_category: int):
     return category
 
 
+def get_all_categories(db: Session):
+    """Получение списка всех категорий товаров"""
+    categories = db.query(Category).all()
+    return categories
+
+
 @dbexception
 def update_category_name(db: Session, id_category: int, new_name: str):
     category = get_category_by_id(db, id_category)
     category.name = new_name
+
 
 # endregion
 
@@ -455,6 +472,13 @@ def update_user_role(db: Session, login_user: str, role: int):
     user.id_role = role
     return True
 
+
+def get_all_users(db: Session):
+    """Получение списка всех пользователей"""
+    users = db.query(Users).all()
+    return users
+
+
 # endregion
 
 
@@ -474,6 +498,7 @@ def add_role(db: Session, role_name: str) -> bool:
         print("Failed")
         return False
     return True
+
 
 # endregion
 
@@ -496,6 +521,7 @@ def add_transaction_type(db: Session, type_name: str) -> bool:
         return False
 
     return True
+
 
 # endregion
 
@@ -521,7 +547,8 @@ def add_transaction(db: Session, transaction: Transaction) -> bool:
         next_purchase = 0
 
         if transaction.id_type == 1:
-            rest, next_purchase = decrease_purchase_count(db, transaction.id_purchase, transaction.amount, transaction.id_type)
+            rest, next_purchase = decrease_purchase_count(db, transaction.id_purchase, transaction.amount,
+                                                          transaction.id_type)
             if rest > 0:
                 transaction.amount = transaction.amount - rest
 
@@ -593,10 +620,12 @@ def get_transactions_by_type(db: Session, id_type: int):
         print("Ошибка при получении транзакций:", ex)
         return []
 
+
 def get_transactions_all(db: Session):
     transactions = db.query(Transaction).all()
     print(transactions)
     return transactions
+
 
 @dbexception
 def delete_transaction_by_id_product(db: Session, id_product: int) -> bool:
@@ -619,6 +648,7 @@ def delete_transaction_by_id_product(db: Session, id_product: int) -> bool:
         db.rollback()
         logging.error(f"Ошибка при удалении транзакций для товара с ID {id_product}: {traceback.format_exc()}")
         return False
+
 
 # endregion
 
@@ -668,7 +698,6 @@ def delete_expense_by_id(db: Session, id_expense: int) -> bool:
     """ Удаление пользователя по логину """
     expense = get_expense_by_id(db, id_expense)
 
-
     if expense:
         expense_name = expense.name
         date = expense.created_on
@@ -679,6 +708,5 @@ def delete_expense_by_id(db: Session, id_expense: int) -> bool:
     else:
         logging.warning(f"Запись о расходах {int} не найдена.")
         return False
-
 
 # endregion

@@ -41,10 +41,6 @@ class Product(Base):
     id_purchase = Column(Integer, ForeignKey('purchase.id'))
     price_mod = Column(Integer, default=0)
 
-    # price_mod
-    # 0 - FIFO
-    # 1 - средние
-
 
 class Purchase(Base):
     __tablename__ = 'purchase'
