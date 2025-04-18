@@ -481,3 +481,53 @@ canvas {
     width: 20%;
 }
 
+/* Стили для ABC-анализа товаров */
+#abcProductsList {
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+#abcProductsList .list-group-item {
+    font-size: 0.9rem;
+    transition: background-color 0.2s;
+}
+
+#abcProductsList .list-group-item:hover {
+    background-color: rgba(0, 0, 0, 0.03);
+}
+
+#abcProductsList .product-name {
+    font-weight: 500;
+}
+
+#abcProductsList .badge {
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+/* Цветовая маркировка групп */
+#headingGroupA .accordion-button {
+    color: #28a745;
+    border-left: 3px solid #28a745;
+}
+
+#headingGroupB .accordion-button {
+    color: #ffc107;
+    border-left: 3px solid #ffc107;
+}
+
+#headingGroupC .accordion-button {
+    color: #6c757d;
+    border-left: 3px solid #6c757d;
+}
+
+/* Адаптивность для мобильных устройств */
+@media (max-width: 768px) {
+    #abcProductsList .product-name {
+        max-width: 150px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        display: inline-block;
+    }
+}

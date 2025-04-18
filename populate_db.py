@@ -2,6 +2,7 @@ from app.config import SessionLocal
 from app.services.service import *
 import random
 from datetime import datetime, timedelta
+from sqlalchemy import delete
 
 """ Данный скрипт заполняет БД тестовыми данными с историей транзакций за последние 6 месяцев """
 
@@ -438,7 +439,7 @@ if __name__ == "__main__":
         create_purchases_with_history(session, products_dict, start_date, end_date)
         create_sales_with_history(session, products_dict, start_date, end_date)
         create_writeoffs_with_history(session, products_dict, start_date, end_date)
-        create_expenses_with_history(session, start_date, end_date)
+
 
         # Подсчет итоговых результатов
         calc_period_results(session)

@@ -2826,7 +2826,7 @@ async function fetchAnalyticsData(startDate, endDate) {
             .slice(0, 10);
 
         // Данные для прогноза
-        const forecastData = generateImprovedForecastData(revenueByDay, 90); // Прогноз на 90 дней
+        const forecastData = generateImprovedForecastData(revenueByDay, 30); // Прогноз на 30 дней
 
         // Активные товары (с продажами в выбранном периоде)
         const activeProductsCount = Object.keys(productSales).length;
@@ -3551,7 +3551,9 @@ function createForecastChart(forecastData, days) {
 }
 
 // Обновление таблицы ABC-анализа
+// Обновление таблицы ABC-анализа
 function updateABCAnalysisTable(abcAnalysis) {
+    // Обновляем основные показатели ABC-анализа
     document.getElementById('groupACount').textContent = abcAnalysis.A.count;
     document.getElementById('groupBCount').textContent = abcAnalysis.B.count;
     document.getElementById('groupCCount').textContent = abcAnalysis.C.count;
@@ -3559,6 +3561,143 @@ function updateABCAnalysisTable(abcAnalysis) {
     document.getElementById('groupAPercent').textContent = abcAnalysis.A.profitPercent.toFixed(1) + '%';
     document.getElementById('groupBPercent').textContent = abcAnalysis.B.profitPercent.toFixed(1) + '%';
     document.getElementById('groupCPercent').textContent = abcAnalysis.C.profitPercent.toFixed(1) + '%';
+
+    // Добавляем отображение товаров для каждой группы
+    const abcProductsContainer = document.getElementById('abcProductsList');
+
+    // Если контейнер не существует, создаем его
+    if (!abcProductsContainer) {
+        // Найдем контейнер, в который добавим список товаров
+        const abcAnalysisCard = document.getElementById('abcPieChart').closest('.card');
+
+        // Создаем новый элемент для списков товаров
+        const productsContainer = document.createElement('div');
+        productsContainer.id = 'abcProductsList';
+        productsContainer.className = 'mt-4';
+
+        abcAnalysisCard.appendChild(productsContainer);
+    }
+
+    // Получаем или создаем контейнер для списков товаров
+    const productsContainer = document.getElementById('abcProductsList');
+
+    // Очищаем контейнер
+    productsContainer.innerHTML = '';
+
+    // Создаем аккордеон для групп A, B, C
+    productsContainer.innerHTML = `
+        <div class="accordion" id="abcAccordion">
+            <!-- Группа A -->
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="headingGroupA">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                            data-bs-target="#collapseGroupA" aria-expanded="false" aria-controls="collapseGroupA">
+                        Группа A (${abcAnalysis.A.count} товаров, ${abcAnalysis.A.profitPercent.toFixed(1)}% прибыли)
+                    </button>
+                </h2>
+                <div id="collapseGroupA" class="accordion-collapse collapse" aria-labelledby="headingGroupA" data-bs-parent="#abcAccordion">
+                    <div class="accordion-body p-0">
+                        <div class="list-group list-group-flush" id="groupAProducts"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Группа B -->
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="headingGroupB">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                            data-bs-target="#collapseGroupB" aria-expanded="false" aria-controls="collapseGroupB">
+                        Группа B (${abcAnalysis.B.count} товаров, ${abcAnalysis.B.profitPercent.toFixed(1)}% прибыли)
+                    </button>
+                </h2>
+                <div id="collapseGroupB" class="accordion-collapse collapse" aria-labelledby="headingGroupB" data-bs-parent="#abcAccordion">
+                    <div class="accordion-body p-0">
+                        <div class="list-group list-group-flush" id="groupBProducts"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Группа C -->
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="headingGroupC">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                            data-bs-target="#collapseGroupC" aria-expanded="false" aria-controls="collapseGroupC">
+                        Группа C (${abcAnalysis.C.count} товаров, ${abcAnalysis.C.profitPercent.toFixed(1)}% прибыли)
+                    </button>
+                </h2>
+                <div id="collapseGroupC" class="accordion-collapse collapse" aria-labelledby="headingGroupC" data-bs-parent="#abcAccordion">
+                    <div class="accordion-body p-0">
+                        <div class="list-group list-group-flush" id="groupCProducts"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    // Заполняем списки товаров для каждой группы
+    fillProductsList('groupAProducts', abcAnalysis.A.products);
+    fillProductsList('groupBProducts', abcAnalysis.B.products);
+    fillProductsList('groupCProducts', abcAnalysis.C.products);
+}
+
+// Вспомогательная функция для заполнения списка товаров
+function fillProductsList(containerId, products) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    // Ограничиваем количество отображаемых товаров для производительности
+    const MAX_DISPLAYED_PRODUCTS = 100;
+    const displayedProducts = products.slice(0, MAX_DISPLAYED_PRODUCTS);
+
+    // Сортируем товары по прибыли от наибольшей к наименьшей
+    displayedProducts.sort((a, b) => b.profit - a.profit);
+
+    // Заполняем контейнер элементами списка
+    displayedProducts.forEach((product, index) => {
+        const listItem = document.createElement('a');
+        listItem.href = '#';
+        listItem.className = 'list-group-item list-group-item-action py-2';
+        listItem.onclick = (e) => {
+            e.preventDefault();
+            // При клике можно добавить действие, например просмотр деталей товара
+            viewProductDetails(product.id);
+        };
+
+        // Форматируем сумму прибыли
+        const profitFormatted = product.profit.toLocaleString('ru-RU', {
+            style: 'currency',
+            currency: 'RUB',
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0
+        });
+
+        // Количество проданных товаров
+        const quantityFormatted = product.quantity + ' шт.';
+
+        // Формируем содержимое элемента списка
+        listItem.innerHTML = `
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <span class="badge bg-secondary me-2">${index + 1}</span>
+                    <span class="product-name">${product.name}</span>
+                </div>
+                <div>
+                    <span class="badge bg-success me-1" title="Прибыль">${profitFormatted}</span>
+                    <span class="badge bg-primary" title="Продано">${quantityFormatted}</span>
+                </div>
+            </div>
+        `;
+
+        container.appendChild(listItem);
+    });
+
+    // Если есть еще товары, которые не отображены
+    if (products.length > MAX_DISPLAYED_PRODUCTS) {
+        const moreItem = document.createElement('div');
+        moreItem.className = 'list-group-item text-center text-muted small py-2';
+        moreItem.textContent = `... и еще ${products.length - MAX_DISPLAYED_PRODUCTS} товаров`;
+        container.appendChild(moreItem);
+    }
 }
 
 // Генерация рекомендаций
@@ -3788,7 +3927,7 @@ function calculateMovingAverage(values, windowSize) {
  */
 
 // Функция для генерации улучшенного прогноза продаж
-function generateImprovedForecastData(historicalData, forecastDays = 90) {
+function generateImprovedForecastData(historicalData, forecastDays = 30) {
     // Проверка наличия исторических данных
     if (!historicalData || Object.keys(historicalData).length === 0) {
         console.error('Отсутствуют исторические данные для прогноза');
@@ -4584,7 +4723,7 @@ async function fetchAnalyticsData(startDate, endDate) {
             .slice(0, 10);
 
         // Данные для прогноза
-        const forecastData = generateImprovedForecastData(revenueByDay, 90); // Прогноз на 90 дней
+        const forecastData = generateImprovedForecastData(revenueByDay, 30); // Прогноз на 30 дней
 
         // Активные товары (с продажами в выбранном периоде)
         const activeProductsCount = Object.keys(productSales).length;
